@@ -51,6 +51,21 @@ impl Trie {
             infos: Vec::new(),
         }
     }
+
+    // 経路を辿り、辿りきれば終点のindexを、辿りきれなければ(終点のindex, 辿れた数)を返す
+    fn pursue(&self, octets: &Vec<u8>) -> Result<usize, (usize, usize)> {
+        let mut check: usize = usize::MAX - 1;
+        let mut child_id: usize = 0;
+        for i in 0..octets.len() {
+            let new_child_id = self.arr[child_id].base + octets[i] as usize;
+            if new_child_id >= self.arr.len() || self.arr[new_child_id].check != child_id {
+                return Err((child_id, i))
+            }
+            child_id = new_child_id;
+        }
+        Ok(child_id)
+    }
+
     // TODO 高速化
     // octetで指定されたoctedへの遷移だけを持つrowを配置する。
     fn find_placeable_pos(&mut self, nodes: &Vec<Node>) -> usize {
@@ -149,6 +164,30 @@ mod trie_test {
         let mut trie = Trie::new();
         trie.arr = [dummy, dummy, dummy2, dummy, dummy].to_vec();
         assert_eq!(trie.extract_row(1, 3, 0), [dummy, emp, dummy]);
+    }
+
+    #[test]
+    fn test_pursue() {
+        let mut trie = Trie::new();
+        trie.arr = [
+            // root
+            Node { base: 1, check: usize::MAX - 1, ptr: 0 },
+            // 1 ~ 3
+            Node { base: 0, check: usize::MAX, ptr: 0 }, Node { base: 4, check: 0, ptr: 0 }, Node { base: 6, check: 0, ptr: 0 },
+            // 4 ~ 5
+            Node { base: 0, check: usize::MAX, ptr: 0 }, Node { base: 6, check: 2, ptr: 0 },
+            // 6
+            Node { base: 7, check: 3, ptr: 0 },
+            // 7
+            Node { base: 8, check: 5, ptr: 0 }
+        ].to_vec();
+        assert_eq!(trie.pursue(&vec![0, 1]), Err((0, 0)));
+        assert_eq!(trie.pursue(&vec![1, 1]), Ok(5));
+        assert_eq!(trie.pursue(&vec![1, 1, 0]), Err((5, 2)));
+        assert_eq!(trie.pursue(&vec![1, 2]), Err((2, 1)));
+        assert_eq!(trie.pursue(&vec![2, 0, 1]), Err((6, 2)));
+        assert_eq!(trie.pursue(&vec![2, 0]), Ok(6));
+        assert_eq!(trie.pursue(&vec![1, 1, 1]), Ok(7));
     }
 }
 
