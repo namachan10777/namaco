@@ -46,8 +46,10 @@ struct WordInfo {
 
 impl Trie {
     fn new() -> Trie {
+        let mut fst = [Node::default(); 257].to_vec();
+        fst[0] = Node { base: 1, check: 0, ptr: 0 };
         Trie {
-            arr: [Node::default(); u8::MAX as usize + 1].to_vec(),
+            arr: fst,
             infos: Vec::new(),
         }
     }
@@ -136,7 +138,7 @@ mod trie_test {
     #[test]
     fn test_find_placeable_pos() {
         let mut trie = Trie::new();
-        assert_eq!(trie.find_placeable_pos(&[dummy].to_vec()), 0);
+        assert_eq!(trie.find_placeable_pos(&[dummy].to_vec()), 1);
         trie.arr = [dummy, emp, dummy, dummy].to_vec();
         assert_eq!(trie.find_placeable_pos(&[dummy, emp, dummy].to_vec()), 4);
         trie.arr = [dummy; 256].to_vec();
