@@ -101,11 +101,12 @@ impl Trie {
         unreachable!()
     }
 
-    fn place(&mut self, nodes: &Vec<Node>) {
+    fn place(&mut self, nodes: &Vec<Node>) -> usize {
         let p = self.find_placeable_pos(&nodes);
         for i in 0..nodes.len() {
             self.arr[i+p] = nodes[i];
         }
+        p
     }
 
     fn erase(&mut self, start: usize, len: usize, parent: usize) {
@@ -125,6 +126,16 @@ impl Trie {
             }
         }
         buf
+    }
+    
+    fn push_out(&mut self, base: usize, octet: usize) {
+        let occupy_parent = self.arr[base + octet].check;
+        let occupy_row = self.extract_row(base, 256, occupy_parent);
+        self.erase(base, 256, occupy_parent);
+        self.arr[base + octet].check = 0;
+        let occupy_base = self.place(&occupy_row);
+        self.arr[occupy_parent].base = occupy_base;
+        self.arr[base + octet].check = usize::MAX;
     }
 }
 #[cfg(test)]
