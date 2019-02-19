@@ -1,0 +1,7 @@
+[package]
+name = "bot"
+version = "0.1.0"
+authors = ["namachan10777 <namachan10777@gmail.com>"]
+edition = "2018"
+
+[dependencies]
