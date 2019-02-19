@@ -5,7 +5,7 @@ use std::u8;
 // ↓読んで
 // https://takeda25.hatenablog.jp/entry/20120219/1329634865
 // 文字ではなくbyte列として扱う。冗長なバイト列なんて存在しないです
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 struct Node {
     // 行のオフセット
     base: usize,
@@ -84,7 +84,7 @@ impl Trie {
         unreachable!()
     }
 
-    fn place(&mut self, nodes: Vec<Node>) {
+    fn place(&mut self, nodes: &Vec<Node>) {
         let p = self.find_placeable_pos(&nodes);
         for i in 0..nodes.len() {
             self.arr[i+p] = nodes[i];
@@ -123,6 +123,16 @@ mod trie_test {
         assert_eq!(trie.find_placeable_pos(&[dummy, emp, dummy].to_vec()), 4);
         trie.arr = [dummy; 256].to_vec();
         assert_eq!(trie.find_placeable_pos(&[dummy, emp, dummy].to_vec()), 256);
+    }
+
+    #[test]
+    fn test_place() {
+        let mut trie = Trie::new();
+        let dummy = Node{base: 0, check: 0, ptr: 0};
+        let emp = Node::default();
+        trie.arr = [dummy, emp, dummy, dummy].to_vec();
+        trie.place(&[dummy, emp, dummy].to_vec());
+        assert!(trie.arr == [dummy, emp, dummy, dummy, dummy, emp, dummy]);
     }
 }
 
