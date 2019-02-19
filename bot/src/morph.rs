@@ -115,14 +115,14 @@ mod trie_test {
     use super::*;
     #[test]
     fn test_place_row() {
-        let mut trie = Trie::new();
-        assert_eq!(trie.find_placeable_pos([Node{base: 0, check: 0, ptr: 0}].to_vec()), 0);
         let dummy = Node{base: 0, check: 0, ptr: 0};
         let emp = Node::default();
+        let mut trie = Trie::new();
+        assert_eq!(trie.find_placeable_pos(&[dummy].to_vec()), 0);
         trie.arr = [dummy, emp, dummy, dummy].to_vec();
-        assert_eq!(trie.find_placeable_pos([dummy, emp, dummy].to_vec()), 4);
+        assert_eq!(trie.find_placeable_pos(&[dummy, emp, dummy].to_vec()), 4);
         trie.arr = [dummy; 256].to_vec();
-        assert_eq!(trie.find_placeable_pos([dummy, emp, dummy].to_vec()), 256);
+        assert_eq!(trie.find_placeable_pos(&[dummy, emp, dummy].to_vec()), 256);
     }
 }
 
