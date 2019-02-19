@@ -53,9 +53,9 @@ impl Trie {
     }
 
     // 経路を辿り、辿りきれば終点のindexを、辿りきれなければ(終点のindex, 辿れた数)を返す
-    fn pursue(&self, octets: &Vec<u8>) -> Result<usize, (usize, usize)> {
-        let mut check: usize = usize::MAX - 1;
-        let mut child_id: usize = 0;
+    fn pursue(&self, parent: usize, octets: &Vec<u8>) -> Result<usize, (usize, usize)> {
+        let mut check: usize = self.arr[parent].check;
+        let mut child_id: usize = parent;
         for i in 0..octets.len() {
             let new_child_id = self.arr[child_id].base + octets[i] as usize;
             if new_child_id >= self.arr.len() || self.arr[new_child_id].check != child_id {
@@ -181,13 +181,13 @@ mod trie_test {
             // 7
             Node { base: 8, check: 5, ptr: 0 }
         ].to_vec();
-        assert_eq!(trie.pursue(&vec![0, 1]), Err((0, 0)));
-        assert_eq!(trie.pursue(&vec![1, 1]), Ok(5));
-        assert_eq!(trie.pursue(&vec![1, 1, 0]), Err((5, 2)));
-        assert_eq!(trie.pursue(&vec![1, 2]), Err((2, 1)));
-        assert_eq!(trie.pursue(&vec![2, 0, 1]), Err((6, 2)));
-        assert_eq!(trie.pursue(&vec![2, 0]), Ok(6));
-        assert_eq!(trie.pursue(&vec![1, 1, 1]), Ok(7));
+        assert_eq!(trie.pursue(0, &vec![0, 1]), Err((0, 0)));
+        assert_eq!(trie.pursue(0, &vec![1, 1]), Ok(5));
+        assert_eq!(trie.pursue(0, &vec![1, 1, 0]), Err((5, 2)));
+        assert_eq!(trie.pursue(0, &vec![1, 2]), Err((2, 1)));
+        assert_eq!(trie.pursue(0, &vec![2, 0, 1]), Err((6, 2)));
+        assert_eq!(trie.pursue(0, &vec![2, 0]), Ok(6));
+        assert_eq!(trie.pursue(0, &vec![1, 1, 1]), Ok(7));
     }
 }
 
