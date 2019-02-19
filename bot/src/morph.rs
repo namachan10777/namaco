@@ -51,8 +51,9 @@ impl Trie {
             infos: Vec::new(),
         }
     }
+    // TODO 高速化
     // octetで指定されたoctedへの遷移だけを持つrowを配置する。
-    fn find_placeable_pos(&mut self, nodes: Vec<Node>) -> usize {
+    fn find_placeable_pos(&mut self, nodes: &Vec<Node>) -> usize {
         for i in 0..(self.arr.len() - nodes.len()) {
             let mut placeable = true;
             for j in 0..nodes.len() {
@@ -81,6 +82,32 @@ impl Trie {
             }
         }
         unreachable!()
+    }
+
+    fn place(&mut self, nodes: Vec<Node>) {
+        let p = self.find_placeable_pos(&nodes);
+        for i in 0..nodes.len() {
+            self.arr[i+p] = nodes[i];
+        }
+    }
+
+    fn erase(&mut self, start: usize, len: usize, parent: usize) {
+        for i in start..start+len {
+            if self.arr[i].check == parent {
+                self.arr[i] = Node::default();
+            }
+        }
+    }
+    
+    fn extract_row(&self, start: usize, len: usize, parent: usize) -> Vec<Node> {
+        let mut buf = Vec::new();
+        buf.resize(len, Node::default());
+        for i in 0..len {
+            if self.arr[start+i].check == parent {
+                buf[i] = self.arr[start+i];
+            }
+        }
+        buf
     }
 }
 #[cfg(test)]
