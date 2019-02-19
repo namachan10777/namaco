@@ -149,10 +149,8 @@ impl Trie {
     fn add(&mut self, octets: &Vec<u8>, info: WordInfo) {
         if let Err((common, pursued)) = self.pursue(octets) {
             let mut current = self.arr[common].base + octets[pursued] as usize;
-            println!("{:?} {:?}", common, pursued);
             // 終端ノード
             if self.arr[common].base == 0 {
-                println!("終端");
                 let mut row = [Node::default(); ROW_LEN].to_vec();
                 row[octets[pursued] as usize].check = common;
                 let base = self.place(&row);
@@ -162,17 +160,12 @@ impl Trie {
             }
             // 非終端ノードかつ衝突あり
             else if self.arr[current].check != NOWHERE {
-                println!("非終端 衝突");
                 self.push_out(current);
-            }
-            else {
-                println!("非終端");
             }
 
             let mut parent = common;
 
             for i in pursued..octets.len() {
-                println!("更新 {}", parent);
                 let mut row = [Node::default(); ROW_LEN].to_vec();
                 row[octets[i] as usize].check = parent;
                 let base = self.place(&row);
