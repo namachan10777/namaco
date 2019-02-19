@@ -113,10 +113,13 @@ impl Trie {
 #[cfg(test)]
 mod trie_test {
     use super::*;
+
+    const dummy: Node = Node{base: 0, check: 0, ptr: 0};
+    const dummy2: Node = Node{base: 0, check: 1, ptr: 0};
+    const emp: Node = Node{base: 0, check: usize::MAX, ptr: 0};
+
     #[test]
-    fn test_place_row() {
-        let dummy = Node{base: 0, check: 0, ptr: 0};
-        let emp = Node::default();
+    fn test_find_placeable_pos() {
         let mut trie = Trie::new();
         assert_eq!(trie.find_placeable_pos(&[dummy].to_vec()), 0);
         trie.arr = [dummy, emp, dummy, dummy].to_vec();
@@ -128,19 +131,14 @@ mod trie_test {
     #[test]
     fn test_place() {
         let mut trie = Trie::new();
-        let dummy = Node{base: 0, check: 0, ptr: 0};
-        let emp = Node::default();
         trie.arr = [dummy, emp, dummy, dummy].to_vec();
         trie.place(&[dummy, emp, dummy].to_vec());
         assert_eq!(trie.arr, [dummy, emp, dummy, dummy, dummy, emp, dummy]);
     }
 
     #[test]
-    fn erase() {
+    fn test_erase() {
         let mut trie = Trie::new();
-        let dummy = Node{base: 0, check: 0, ptr: 0};
-        let dummy2 =  Node{base: 0, check: 1, ptr: 0};
-        let emp = Node::default();
         trie.arr = [dummy, dummy, dummy2, dummy, dummy].to_vec();
         trie.erase(1, 3, 0);
         assert_eq!(trie.arr, [dummy, emp, dummy2, emp, dummy]);
@@ -149,9 +147,6 @@ mod trie_test {
     #[test]
     fn test_extract_row() {
         let mut trie = Trie::new();
-        let dummy = Node{base: 0, check: 0, ptr: 0};
-        let dummy2 =  Node{base: 0, check: 1, ptr: 0};
-        let emp = Node::default();
         trie.arr = [dummy, dummy, dummy2, dummy, dummy].to_vec();
         assert_eq!(trie.extract_row(1, 3, 0), [dummy, emp, dummy]);
     }
