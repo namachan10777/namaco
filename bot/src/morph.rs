@@ -145,6 +145,16 @@ mod trie_test {
         trie.erase(1, 3, 0);
         assert_eq!(trie.arr, [dummy, emp, dummy2, emp, dummy]);
     }
+
+    #[test]
+    fn test_extract_row() {
+        let mut trie = Trie::new();
+        let dummy = Node{base: 0, check: 0, ptr: 0};
+        let dummy2 =  Node{base: 0, check: 1, ptr: 0};
+        let emp = Node::default();
+        trie.arr = [dummy, dummy, dummy2, dummy, dummy].to_vec();
+        assert_eq!(trie.extract_row(1, 3, 0), [dummy, emp, dummy]);
+    }
 }
 
 pub struct Splitter  {}
