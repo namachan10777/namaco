@@ -151,6 +151,7 @@ impl Trie {
             let mut current = self.arr[common].base + octets[pursued] as usize;
             // 終端ノード
             if self.arr[common].base == 0 {
+                // 子のスペースを確保し、非終端ノードに
                 let mut row = [Node::default(); ROW_LEN].to_vec();
                 row[octets[pursued] as usize].check = common;
                 let base = self.place(&row);
@@ -166,6 +167,7 @@ impl Trie {
             let mut parent = common;
 
             for i in pursued..octets.len() {
+                // rowを追加しながらparentを更新していく
                 let mut row = [Node::default(); ROW_LEN].to_vec();
                 row[octets[i] as usize].check = parent;
                 let base = self.place(&row);
