@@ -34,7 +34,7 @@ struct Trie {
 }
 
 #[derive(Clone, Debug, PartialEq)]
-enum wclass {
+enum Class {
     Dummy,
 }
 
@@ -43,7 +43,7 @@ struct WordInfo {
     lid: u16,
     rid: u16,
     cost: u16,
-    wclass: wclass,
+    class: Class,
 }
 
 const NOWHERE: usize = usize::MAX;
@@ -61,7 +61,6 @@ impl Trie {
 
     // 経路を辿り、辿りきれば終点のindexを、辿りきれなければ(終点のindex, 辿れた数)を返す
     fn pursue(&self, octets: &Vec<u8>) -> Result<usize, (usize, usize)> {
-        let mut check: usize = self.arr[0].check;
         let mut child_id: usize = 0;
         for i in 0..octets.len() {
             let new_child_id = self.arr[child_id].base + octets[i] as usize;
@@ -149,7 +148,7 @@ impl Trie {
 
     fn add(&mut self, octets: &Vec<u8>, info: WordInfo) {
         if let Err((common, pursued)) = self.pursue(octets) {
-            let mut current = self.arr[common].base + octets[pursued] as usize;
+            let current = self.arr[common].base + octets[pursued] as usize;
             // 終端ノード
             if self.arr[common].base == 0 {
                 // 子のスペースを確保し、非終端ノードに
@@ -157,8 +156,6 @@ impl Trie {
                 row[octets[pursued] as usize].check = common;
                 let base = self.place(&row);
                 self.arr[common].base = base;
-
-                current = base + octets[pursued] as usize;
             }
             // 非終端ノードかつ衝突あり
             else if self.arr[current].check != NOWHERE {
@@ -194,26 +191,25 @@ impl Trie {
 mod trie_test {
     use super::*;
 
-    const dummy: Node = Node{base: 0, check: 0, ptr: 0};
-    const dummy2: Node = Node{base: 0, check: 1, ptr: 0};
-    const emp: Node = Node{base: 0, check: NOWHERE, ptr: 0};
+    const DUMMY1: Node = Node{base: 0, check: 0, ptr: 0};
+    const EMP: Node = Node{base: 0, check: NOWHERE, ptr: 0};
 
     #[test]
     fn test_find_placeable_pos() {
         let mut trie = Trie::new();
-        assert_eq!(trie.find_placeable_pos(&[dummy].to_vec()), 1);
-        trie.arr = [dummy, emp, dummy, dummy].to_vec();
-        assert_eq!(trie.find_placeable_pos(&[dummy, emp, dummy].to_vec()), 4);
-        trie.arr = [dummy; ROW_LEN].to_vec();
-        assert_eq!(trie.find_placeable_pos(&[dummy, emp, dummy].to_vec()), ROW_LEN);
+        assert_eq!(trie.find_placeable_pos(&[DUMMY1].to_vec()), 1);
+        trie.arr = [DUMMY1, EMP, DUMMY1, DUMMY1].to_vec();
+        assert_eq!(trie.find_placeable_pos(&[DUMMY1, EMP, DUMMY1].to_vec()), 4);
+        trie.arr = [DUMMY1; ROW_LEN].to_vec();
+        assert_eq!(trie.find_placeable_pos(&[DUMMY1, EMP, DUMMY1].to_vec()), ROW_LEN);
     }
 
     #[test]
     fn test_place() {
         let mut trie = Trie::new();
-        trie.arr = [dummy, emp, dummy, dummy].to_vec();
-        trie.place(&[dummy, emp, dummy].to_vec());
-        assert_eq!(trie.arr, [dummy, emp, dummy, dummy, dummy, emp, dummy]);
+        trie.arr = [DUMMY1, EMP, DUMMY1, DUMMY1].to_vec();
+        trie.place(&[DUMMY1, EMP, DUMMY1].to_vec());
+        assert_eq!(trie.arr, [DUMMY1, EMP, DUMMY1, DUMMY1, DUMMY1, EMP, DUMMY1]);
     }
 
     #[test]
@@ -243,9 +239,9 @@ mod trie_test {
     #[test]
     fn test_add() {
         let mut trie = Trie::new();
-        let w1 = WordInfo { lid: 0, rid: 0, cost: 1, wclass: wclass::Dummy };
-        let w2 = WordInfo { lid: 0, rid: 0, cost: 2, wclass: wclass::Dummy };
-        let w3 = WordInfo { lid: 0, rid: 0, cost: 3, wclass: wclass::Dummy };
+        let w1 = WordInfo { lid: 0, rid: 0, cost: 1, class: Class::Dummy };
+        let w2 = WordInfo { lid: 0, rid: 0, cost: 2, class: Class::Dummy };
+        let w3 = WordInfo { lid: 0, rid: 0, cost: 3, class: Class::Dummy };
         trie.add(&vec![0], w1.clone());
         trie.add(&vec![0, 1], w2.clone());
         trie.add(&vec![1, 2, 3], w3.clone());
