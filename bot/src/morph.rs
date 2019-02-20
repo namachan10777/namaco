@@ -1,3 +1,4 @@
+// copyright (c) 2019 Nakano Masaki <namachan10777@gmail.com>
 use std::usize;
 use std::vec::Vec;
 use std::u8;
