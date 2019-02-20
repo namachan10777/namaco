@@ -26,23 +26,25 @@ impl Default for Node {
     }
 }
 
-struct Trie {
+pub struct Trie {
     // 圧縮済み遷移表
     arr: Vec<Node>,
     // 品詞辞書本体
     infos: Vec<WordInfo>
 }
 
-#[derive(Clone, Debug, PartialEq)]
-enum Class {
-    Dummy,
+#[derive(Clone, Debug, PartialEq, Default)]
+struct Class {
+    class: String,
+    subclass: String,
+    desc: String,
+    subdesc: String,
 }
 
 #[derive(Clone, Debug, PartialEq)]
 struct WordInfo {
-    lid: u16,
-    rid: u16,
-    cost: u16,
+    id: i16,
+    cost: i16,
     class: Class,
 }
 
@@ -60,7 +62,7 @@ impl Trie {
     }
 
     // 経路を辿り、辿りきれば終点のindexを、辿りきれなければ(終点のindex, 辿れた数)を返す
-    fn pursue(&self, octets: &Vec<u8>) -> Result<usize, (usize, usize)> {
+    fn pursue(&self, octets: &[u8]) -> Result<usize, (usize, usize)> {
         let mut child_id: usize = 0;
         for i in 0..octets.len() {
             let new_child_id = self.arr[child_id].base + octets[i] as usize;
@@ -146,7 +148,7 @@ impl Trie {
         self.arr[idx].check = NOWHERE;
     }
 
-    fn add(&mut self, octets: &Vec<u8>, info: WordInfo) {
+    fn add(&mut self, octets: &[u8], info: WordInfo) {
         if let Err((common, pursued)) = self.pursue(octets) {
             let current = self.arr[common].base + octets[pursued] as usize;
             // 終端ノード
@@ -239,14 +241,65 @@ mod trie_test {
     #[test]
     fn test_add() {
         let mut trie = Trie::new();
-        let w1 = WordInfo { lid: 0, rid: 0, cost: 1, class: Class::Dummy };
-        let w2 = WordInfo { lid: 0, rid: 0, cost: 2, class: Class::Dummy };
-        let w3 = WordInfo { lid: 0, rid: 0, cost: 3, class: Class::Dummy };
+        let w1 = WordInfo { id: 0, cost: 1, class: Class::default() };
+        let w2 = WordInfo { id: 0, cost: 2, class: Class::default() };
+        let w3 = WordInfo { id: 0, cost: 3, class: Class::default() };
         trie.add(&vec![0], w1.clone());
         trie.add(&vec![0, 1], w2.clone());
         trie.add(&vec![1, 2, 3], w3.clone());
         assert_eq!(trie.find(&vec![0]), Some(w1));
         assert_eq!(trie.find(&vec![1, 2, 3]), Some(w3));
+    }
+}
+
+use std::fs;
+use std::io;
+use std::io::BufRead;
+
+pub fn build_trie(f: &fs::File) -> Trie {
+    let mut trie = Trie::new();
+    let mut reader = io::BufReader::new(f);
+    let mut buf = String::new();
+    loop {
+        if let Ok(len) = reader.read_line(&mut buf){
+            if len == 0 {
+                break
+            }
+            let elms: Vec<&str> = buf.split(',').collect();
+            println!("adding: {:?}", elms[0]);
+            let key = elms[0].as_bytes();
+            let id: i16 = elms[1].parse().unwrap();
+            let cost: i16 = elms[3].parse().unwrap();
+            let class = elms[4].to_string();
+            let subclass = elms[5].to_string();
+            let desc = elms[6].to_string();
+            let subdesc = elms[7].to_string();
+            let info = WordInfo {
+                id: id,
+                cost: cost,
+                class: Class {
+                    class: class,
+                    subclass: subclass,
+                    desc: desc,
+                    subdesc: subdesc,
+                },
+            };
+            trie.add(&key, info);
+            buf.clear();
+        }
+        else {
+            break
+        }
+    }
+    trie
+}
+
+#[cfg(test)]
+mod test_trie_build {
+    use super::*;
+
+    #[test]
+    fn test_trie_build() {
     }
 }
 
