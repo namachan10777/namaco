@@ -19,9 +19,9 @@ struct Node {
 impl Default for Node {
     fn default() -> Node {
         Node {
-            base: 0,
+            base: NOWHERE,
             check: NOWHERE,
-            ptr: 0
+            ptr: NOWHERE
         }
     }
 }
@@ -80,6 +80,9 @@ impl Trie {
     fn pursue(&self, octets: &[u8]) -> Result<usize, (usize, usize)> {
         let mut child_id: usize = 0;
         for i in 0..octets.len() {
+            if self.arr[child_id].base == NOWHERE {
+                return Err((child_id, i))
+            }
             let new_child_id = self.arr[child_id].base + octets[i] as usize;
             if new_child_id >= self.arr.len() || self.arr[new_child_id].check != child_id {
                 return Err((child_id, i))
@@ -166,32 +169,33 @@ impl Trie {
         buf
     }
     
-    fn push_out(&mut self, idx: usize) {
-        let base = self.arr[idx].base;
-        let occupy_parent = self.arr[idx].check;
-        let occupy_row = self.extract_row(base, occupy_parent);
-        self.erase(base, occupy_parent);
+    fn push_out(&mut self, occupy_idx: usize) {
+        let occupy_parent = self.arr[self.arr[occupy_idx].check];
+        let occupy_row = self.extract_row(occupy_parent.base, occupy_parent.check);
+        self.erase(occupy_parent.base, occupy_parent.check);
         // 再配置防止に
-        self.arr[idx].check = 0;
+        self.arr[occupy_idx].check = 0;
         let occupy_base = self.place(&occupy_row);
-        self.arr[occupy_parent].base = occupy_base;
-        self.arr[idx].check = NOWHERE;
+        self.arr[occupy_parent.check].base = occupy_base;
+        self.arr[occupy_idx].check = NOWHERE;
     }
 
     fn add(&mut self, octets: &[u8], info: WordInfo) {
         if let Err((common, pursued)) = self.pursue(octets) {
-            let current = self.arr[common].base + octets[pursued] as usize;
+            if self.arr[common].base != NOWHERE {
+                let current = self.arr[common].base + octets[pursued] as usize;
+                // 非終端ノードかつ衝突あり
+                if self.arr[current].check != NOWHERE {
+                    self.push_out(current);
+                }
+            }
             // 終端ノード
-            if self.arr[common].base == 0 {
+            else {
                 // 子のスペースを確保し、非終端ノードに
                 let mut row = [Node::default(); ROW_LEN];
                 row[octets[pursued] as usize].check = common;
                 let base = self.place(&row);
                 self.arr[common].base = base;
-            }
-            // 非終端ノードかつ衝突あり
-            else if self.arr[current].check != NOWHERE {
-                self.push_out(current);
             }
 
             let mut parent = common;
@@ -297,6 +301,7 @@ mod trie_test {
         trie.add(&vec![0, 1], w2.clone());
         trie.add(&vec![1, 2, 3], w3.clone());
         assert_eq!(trie.find(&vec![0]), Some(w1));
+        assert_eq!(trie.find(&vec![0, 1]), Some(w2));
         assert_eq!(trie.find(&vec![1, 2, 3]), Some(w3));
     }
 }
