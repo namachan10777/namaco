@@ -30,7 +30,9 @@ pub struct Trie {
     // 圧縮済み遷移表
     arr: Vec<Node>,
     // 品詞辞書本体
-    infos: Vec<WordInfo>
+    infos: Vec<WordInfo>,
+    // 0~1, 1~4, 4~32, 32~
+    footprint: [usize; 4],
 }
 
 #[derive(Clone, Debug, PartialEq, Default)]
@@ -53,6 +55,16 @@ const ROW_LEN: usize = 256;
 
 type Row = [Node; ROW_LEN];
 
+fn cnt_enable(nodes: &Row) -> usize {
+    let mut c = 0;
+    for node in nodes.iter() {
+        if node.check != NOWHERE {
+            c += 1;
+        }
+    }
+    c
+}
+
 impl Trie {
     fn new() -> Trie {
         let mut arr = vec![Node::default(); ROW_LEN+1].to_vec();
@@ -60,6 +72,7 @@ impl Trie {
         Trie {
             arr: arr,
             infos: Vec::new(),
+            footprint: [0, 0, 0, 0],
         }
     }
 
@@ -79,7 +92,22 @@ impl Trie {
     // TODO 高速化
     // octetで指定されたoctedへの遷移だけを持つrowを配置する。
     fn find_placeable_pos(&mut self, nodes: &Row) -> usize {
-        for i in 0..(self.arr.len() - ROW_LEN) {
+
+        let enable_cnt = cnt_enable(nodes);
+        let row_class = if enable_cnt < 2 {
+            0
+        }
+        else if enable_cnt < 4 {
+            1
+        }
+        else if enable_cnt < 32 {
+            2
+        }
+        else {
+            3
+        };
+
+        for i in self.footprint[row_class]..(self.arr.len() - ROW_LEN) {
             let mut placeable = true;
             for j in 0..nodes.len() {
                 // 衝突があると再配置不可
@@ -89,6 +117,7 @@ impl Trie {
                 }
             }
             if placeable {
+                self.footprint[row_class] = i;
                 return i
             }
         }
