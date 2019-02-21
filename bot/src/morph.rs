@@ -228,43 +228,42 @@ mod trie_test {
     use super::*;
 
     const DUMMY1: Node = Node{base: 0, check: 0, ptr: 0};
-    const EMP: Node = Node{base: 0, check: NOWHERE, ptr: 0};
+    const EMP: Node = Node{base: NOWHERE, check: NOWHERE, ptr: NOWHERE};
+
+    fn make_row(head: &[Node]) -> [Node; ROW_LEN] {
+        let mut row = [Node::default(); ROW_LEN];
+        for i in 0..head.len() {
+            row[i] = head[i];
+        }
+        row
+    }
+
+    fn make_arr(len: usize, head: &[Node]) -> Vec<Node> {
+        let mut arr = Vec::new();
+        arr.resize(len, Node::default());
+        for i in 0..head.len() {
+            arr[i] = head[i]
+        }
+        arr
+    }
 
     #[test]
     fn test_find_placeable_pos() {
         let mut trie = Trie::new();
-        let mut row = [Node::default(); ROW_LEN];
-        row[0] = DUMMY1;
-        assert_eq!(trie.find_placeable_pos(&row), 1);
-        row[1] = EMP;
-        row[2] = DUMMY1;
-        trie.arr = [Node::default(); ROW_LEN].to_vec();
-        trie.arr[0] = DUMMY1;
-        trie.arr[2] = DUMMY1;
-        trie.arr[3] = DUMMY1;
-        assert_eq!(trie.find_placeable_pos(&row), 4);
+        assert_eq!(trie.find_placeable_pos(&make_row(&[DUMMY1])), 1);
+        trie.arr = make_arr(ROW_LEN, &[DUMMY1, EMP, DUMMY1, DUMMY1]);
+        assert_eq!(trie.find_placeable_pos(&make_row(&[DUMMY1, EMP, DUMMY1])), 4);
         trie.arr = [Node { base: 0, check: 0, ptr: 0 }; ROW_LEN].to_vec();
-        assert_eq!(trie.find_placeable_pos(&row), ROW_LEN);
+        assert_eq!(trie.find_placeable_pos(&make_row(&[DUMMY1, EMP, DUMMY1])), ROW_LEN);
     }
 
     #[test]
     fn test_place() {
         let mut trie = Trie::new();
-        trie.arr[0] = DUMMY1;
-        trie.arr[2] = DUMMY1;
-        trie.arr[3] = DUMMY1;
-        let mut row = [Node::default(); ROW_LEN];
-        row[0] = DUMMY1;
-        row[1] = EMP;
-        row[2] = DUMMY1;
-        trie.place(&row);
-        let mut ans = [Node::default();ROW_LEN+4];
-        ans[0] = DUMMY1;
-        ans[2] = DUMMY1;
-        ans[3] = DUMMY1;
-        ans[4] = DUMMY1;
-        ans[6] = DUMMY1;
-        assert_eq!(trie.arr, ans.to_vec());
+        trie.arr = make_arr(ROW_LEN, &[DUMMY1, EMP, DUMMY1, DUMMY1]);
+        trie.place(&make_row(&[DUMMY1, EMP, DUMMY1]));
+        let ans = make_arr(ROW_LEN+4, &[DUMMY1, EMP, DUMMY1, DUMMY1, DUMMY1, EMP, DUMMY1]);
+        assert_eq!(trie.arr, ans);
     }
 
     #[test]
