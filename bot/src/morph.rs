@@ -51,6 +51,8 @@ struct WordInfo {
 const NOWHERE: usize = usize::MAX;
 const ROW_LEN: usize = 256;
 
+type Row = [Node; ROW_LEN];
+
 impl Trie {
     fn new() -> Trie {
         let mut arr = vec![Node::default(); ROW_LEN+1].to_vec();
@@ -76,8 +78,8 @@ impl Trie {
 
     // TODO 高速化
     // octetで指定されたoctedへの遷移だけを持つrowを配置する。
-    fn find_placeable_pos(&mut self, nodes: &Vec<Node>) -> usize {
-        for i in 0..(self.arr.len() - nodes.len()) {
+    fn find_placeable_pos(&mut self, nodes: &Row) -> usize {
+        for i in 0..(self.arr.len() - ROW_LEN) {
             let mut placeable = true;
             for j in 0..nodes.len() {
                 // 衝突があると再配置不可
@@ -107,7 +109,7 @@ impl Trie {
         unreachable!()
     }
 
-    fn place(&mut self, nodes: &Vec<Node>) -> usize {
+    fn place(&mut self, nodes: &Row) -> usize {
         let p = self.find_placeable_pos(&nodes);
         for i in 0..nodes.len() {
             if nodes[i].check != NOWHERE {
@@ -125,9 +127,8 @@ impl Trie {
         }
     }
     
-    fn extract_row(&self, start: usize, parent: usize) -> Vec<Node> {
-        let mut buf = Vec::new();
-        buf.resize(ROW_LEN, Node::default());
+    fn extract_row(&self, start: usize, parent: usize) -> Row {
+        let mut buf = [Node::default(); ROW_LEN];
         for i in 0..ROW_LEN {
             if self.arr[start+i].check == parent {
                 buf[i] = self.arr[start+i];
@@ -154,7 +155,7 @@ impl Trie {
             // 終端ノード
             if self.arr[common].base == 0 {
                 // 子のスペースを確保し、非終端ノードに
-                let mut row = [Node::default(); ROW_LEN].to_vec();
+                let mut row = [Node::default(); ROW_LEN];
                 row[octets[pursued] as usize].check = common;
                 let base = self.place(&row);
                 self.arr[common].base = base;
@@ -168,7 +169,7 @@ impl Trie {
 
             for i in pursued..octets.len() {
                 // rowを追加しながらparentを更新していく
-                let mut row = [Node::default(); ROW_LEN].to_vec();
+                let mut row = [Node::default(); ROW_LEN];
                 row[octets[i] as usize].check = parent;
                 let base = self.place(&row);
                 self.arr[parent].base = base;
@@ -199,19 +200,38 @@ mod trie_test {
     #[test]
     fn test_find_placeable_pos() {
         let mut trie = Trie::new();
-        assert_eq!(trie.find_placeable_pos(&[DUMMY1].to_vec()), 1);
-        trie.arr = [DUMMY1, EMP, DUMMY1, DUMMY1].to_vec();
-        assert_eq!(trie.find_placeable_pos(&[DUMMY1, EMP, DUMMY1].to_vec()), 4);
-        trie.arr = [DUMMY1; ROW_LEN].to_vec();
-        assert_eq!(trie.find_placeable_pos(&[DUMMY1, EMP, DUMMY1].to_vec()), ROW_LEN);
+        let mut row = [Node::default(); ROW_LEN];
+        row[0] = DUMMY1;
+        assert_eq!(trie.find_placeable_pos(&row), 1);
+        row[1] = EMP;
+        row[2] = DUMMY1;
+        trie.arr = [Node::default(); ROW_LEN].to_vec();
+        trie.arr[0] = DUMMY1;
+        trie.arr[2] = DUMMY1;
+        trie.arr[3] = DUMMY1;
+        assert_eq!(trie.find_placeable_pos(&row), 4);
+        trie.arr = [Node { base: 0, check: 0, ptr: 0 }; ROW_LEN].to_vec();
+        assert_eq!(trie.find_placeable_pos(&row), ROW_LEN);
     }
 
     #[test]
     fn test_place() {
         let mut trie = Trie::new();
-        trie.arr = [DUMMY1, EMP, DUMMY1, DUMMY1].to_vec();
-        trie.place(&[DUMMY1, EMP, DUMMY1].to_vec());
-        assert_eq!(trie.arr, [DUMMY1, EMP, DUMMY1, DUMMY1, DUMMY1, EMP, DUMMY1]);
+        trie.arr[0] = DUMMY1;
+        trie.arr[2] = DUMMY1;
+        trie.arr[3] = DUMMY1;
+        let mut row = [Node::default(); ROW_LEN];
+        row[0] = DUMMY1;
+        row[1] = EMP;
+        row[2] = DUMMY1;
+        trie.place(&row);
+        let mut ans = [Node::default();ROW_LEN+4];
+        ans[0] = DUMMY1;
+        ans[2] = DUMMY1;
+        ans[3] = DUMMY1;
+        ans[4] = DUMMY1;
+        ans[6] = DUMMY1;
+        assert_eq!(trie.arr, ans.to_vec());
     }
 
     #[test]
