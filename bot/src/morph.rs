@@ -108,6 +108,19 @@ impl Trie {
         }
         buf
     }
+
+    fn mov(&mut self, from: usize, to: usize) {
+        let base = self.arr[from].base;
+        if base != NOWHERE {
+            for i in base..base+ROW_LEN {
+                if i < self.arr.len() && self.arr[i].check == from {
+                    self.arr[i].check = to;
+                }
+            }
+        }
+        self.arr[to] = self.arr[from];
+        self.arr[from] = Node::default();
+    }
 }
 #[cfg(test)]
 mod test_low_level_trie {
@@ -130,6 +143,38 @@ mod test_low_level_trie {
         assert_eq!(trie.extract_row(0, 0).to_vec(), make_row(&[DUMMY1, EMP, EMP, DUMMY1]).to_vec());
         assert_eq!(trie.extract_row(1, 0).to_vec(), make_row(&[EMP, EMP, DUMMY1, EMP]).to_vec());
         assert_eq!(trie.extract_row(0, 1).to_vec(), make_row(&[EMP, EMP, DUMMY2, EMP]).to_vec());
+    }
+
+    #[test]
+    fn test_mov() {
+        let mut trie = Trie::new();
+        trie.arr = make_arr(ROW_LEN, &[
+            Node { base: NOWHERE, check: NOWHERE, ptr: 1 },
+            Node { base: 2, check: 0, ptr: 2 },
+            Node { base: NOWHERE, check: 1, ptr: 3 },
+            Node { base: NOWHERE, check: NOWHERE, ptr: 4 },
+            Node { base: NOWHERE, check: 1, ptr: 5 },
+        ]);
+        trie.mov(0, 5);
+        assert_eq!(trie.arr,
+            make_arr(ROW_LEN, &[
+                Node::default(),
+                Node { base: 2, check: 0, ptr: 2 },
+                Node { base: NOWHERE, check: 1, ptr: 3 },
+                Node { base: NOWHERE, check: NOWHERE, ptr: 4 },
+                Node { base: NOWHERE, check: 1, ptr: 5 },
+                Node { base: NOWHERE, check: NOWHERE, ptr: 1 },
+        ]));
+        trie.mov(1, 0);
+        assert_eq!(trie.arr,
+            make_arr(ROW_LEN, &[
+                Node { base: 2, check: 0, ptr: 2 },
+                Node::default(),
+                Node { base: NOWHERE, check: 0, ptr: 3 },
+                Node { base: NOWHERE, check: NOWHERE, ptr: 4 },
+                Node { base: NOWHERE, check: 0, ptr: 5 },
+                Node { base: NOWHERE, check: NOWHERE, ptr: 1 },
+        ]));
     }
 }
 
