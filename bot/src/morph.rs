@@ -65,17 +65,76 @@ fn cnt_enable(nodes: &Row) -> usize {
     c
 }
 
+// test helper
+fn make_row(head: &[Node]) -> [Node; ROW_LEN] {
+    let mut row = [Node::default(); ROW_LEN];
+    for i in 0..head.len() {
+        row[i] = head[i];
+    }
+    row
+}
+
+// test helper
+fn make_arr(len: usize, head: &[Node]) -> Vec<Node> {
+    let mut arr = Vec::new();
+    arr.resize(len, Node::default());
+    for i in 0..head.len() {
+        arr[i] = head[i]
+    }
+    arr
+}
+
+// test helper
+const DUMMY1: Node = Node{base: 0, check: 0, ptr: 0};
+const DUMMY2: Node = Node{base: 0, check: 1, ptr: 0};
+const EMP: Node = Node{base: NOWHERE, check: NOWHERE, ptr: NOWHERE};
+
+// low level
 impl Trie {
-    fn new() -> Trie {
-        let mut arr = vec![Node::default(); ROW_LEN+1].to_vec();
-        arr[0] = Node { base: 1, check: 0, ptr: 0 };
-        Trie {
-            arr: arr,
-            infos: Vec::new(),
-            footprint: [0, 0, 0, 0],
+    fn erase(&mut self, start: usize, parent: usize) {
+        for i in start..start+ROW_LEN {
+            if self.arr[i].check == parent {
+                self.arr[i] = Node::default();
+            }
         }
     }
+    
+    fn extract_row(&self, start: usize, parent: usize) -> Row {
+        let mut buf = [Node::default(); ROW_LEN];
+        for i in 0..ROW_LEN {
+            if self.arr[start+i].check == parent {
+                buf[i] = self.arr[start+i];
+            }
+        }
+        buf
+    }
+}
+#[cfg(test)]
+mod test_low_level_trie {
+    use super::*;
+    #[test]
+    fn test_erace() {
+        let mut trie = Trie::new();
+        trie.arr = make_arr(ROW_LEN+1, &[DUMMY1, EMP, DUMMY2, DUMMY1]);
+        trie.erase(1, 0);
+        assert_eq!(trie.arr, make_arr(ROW_LEN+1, &[DUMMY1, EMP, DUMMY2, EMP]));
+        trie.arr = make_arr(ROW_LEN, &[DUMMY1, EMP, DUMMY2, DUMMY1]);
+        trie.erase(0, 0);
+        assert_eq!(trie.arr, make_arr(ROW_LEN, &[EMP, EMP, DUMMY2, EMP]));
+    }
 
+    #[test]
+    fn test_extract_row() {
+        let mut trie = Trie::new();
+        trie.arr = make_arr(ROW_LEN+10, &[DUMMY1, EMP, DUMMY2, DUMMY1]);
+        assert_eq!(trie.extract_row(0, 0).to_vec(), make_row(&[DUMMY1, EMP, EMP, DUMMY1]).to_vec());
+        assert_eq!(trie.extract_row(1, 0).to_vec(), make_row(&[EMP, EMP, DUMMY1, EMP]).to_vec());
+        assert_eq!(trie.extract_row(0, 1).to_vec(), make_row(&[EMP, EMP, DUMMY2, EMP]).to_vec());
+    }
+}
+
+// middle level
+impl Trie {
     // 経路を辿り、辿りきれば終点のindexを、辿りきれなければ(終点のindex, 辿れた数)を返す
     fn pursue(&self, octets: &[u8]) -> Result<usize, (usize, usize)> {
         let mut child_id: usize = 0;
@@ -150,24 +209,6 @@ impl Trie {
         }
         p
     }
-
-    fn erase(&mut self, start: usize, parent: usize) {
-        for i in start..start+ROW_LEN {
-            if self.arr[i].check == parent {
-                self.arr[i] = Node::default();
-            }
-        }
-    }
-    
-    fn extract_row(&self, start: usize, parent: usize) -> Row {
-        let mut buf = [Node::default(); ROW_LEN];
-        for i in 0..ROW_LEN {
-            if self.arr[start+i].check == parent {
-                buf[i] = self.arr[start+i];
-            }
-        }
-        buf
-    }
     
     fn push_out(&mut self, occupy_idx: usize) {
         let occupy_parent = self.arr[self.arr[occupy_idx].check];
@@ -179,6 +220,66 @@ impl Trie {
         self.arr[occupy_parent.check].base = occupy_base;
         self.arr[occupy_idx].check = NOWHERE;
     }
+}
+#[cfg(test)]
+mod test_middle_level_trie {
+    use super::*;
+
+    #[test]
+    fn test_find_placeable_pos() {
+        let mut trie = Trie::new();
+        assert_eq!(trie.find_placeable_pos(&make_row(&[DUMMY1])), 1);
+        trie.arr = make_arr(ROW_LEN, &[DUMMY1, EMP, DUMMY1, DUMMY1]);
+        assert_eq!(trie.find_placeable_pos(&make_row(&[DUMMY1, EMP, DUMMY1])), 4);
+        trie.arr = [Node { base: 0, check: 0, ptr: 0 }; ROW_LEN].to_vec();
+        assert_eq!(trie.find_placeable_pos(&make_row(&[DUMMY1, EMP, DUMMY1])), ROW_LEN);
+    }
+
+    #[test]
+    fn test_pursue() {
+        let mut trie = Trie::new();
+        trie.arr = [
+            // root
+            Node { base: 1, check: NOWHERE - 1, ptr: 0 },
+            // 1 ~ 3
+            Node { base: 0, check: NOWHERE, ptr: 0 }, Node { base: 4, check: 0, ptr: 0 }, Node { base: 6, check: 0, ptr: 0 },
+            // 4 ~ 5
+            Node { base: 0, check: NOWHERE, ptr: 0 }, Node { base: 6, check: 2, ptr: 0 },
+            // 6
+            Node { base: 7, check: 3, ptr: 0 },
+            // 7
+            Node { base: 8, check: 5, ptr: 0 }
+        ].to_vec();
+        assert_eq!(trie.pursue(&vec![0, 1]), Err((0, 0)));
+        assert_eq!(trie.pursue(&vec![1, 1]), Ok(5));
+        assert_eq!(trie.pursue(&vec![1, 1, 0]), Err((5, 2)));
+        assert_eq!(trie.pursue(&vec![1, 2]), Err((2, 1)));
+        assert_eq!(trie.pursue(&vec![2, 0, 1]), Err((6, 2)));
+        assert_eq!(trie.pursue(&vec![2, 0]), Ok(6));
+        assert_eq!(trie.pursue(&vec![1, 1, 1]), Ok(7));
+    }
+
+    #[test]
+    fn test_place() {
+        let mut trie = Trie::new();
+        trie.arr = make_arr(ROW_LEN, &[DUMMY1, EMP, DUMMY1, DUMMY1]);
+        trie.place(&make_row(&[DUMMY1, EMP, DUMMY1]));
+        let ans = make_arr(ROW_LEN+4, &[DUMMY1, EMP, DUMMY1, DUMMY1, DUMMY1, EMP, DUMMY1]);
+        assert_eq!(trie.arr, ans);
+    }
+}
+
+impl Trie {
+    fn new() -> Trie {
+        let mut arr = vec![Node::default(); ROW_LEN+1].to_vec();
+        arr[0] = Node { base: 1, check: 0, ptr: 0 };
+        Trie {
+            arr: arr,
+            infos: Vec::new(),
+            footprint: [0, 0, 0, 0],
+        }
+    }
+
 
     fn add(&mut self, octets: &[u8], info: WordInfo) {
         if let Err((common, pursued)) = self.pursue(octets) {
@@ -227,71 +328,8 @@ impl Trie {
 mod trie_test {
     use super::*;
 
-    const DUMMY1: Node = Node{base: 0, check: 0, ptr: 0};
-    const EMP: Node = Node{base: NOWHERE, check: NOWHERE, ptr: NOWHERE};
-
-    fn make_row(head: &[Node]) -> [Node; ROW_LEN] {
-        let mut row = [Node::default(); ROW_LEN];
-        for i in 0..head.len() {
-            row[i] = head[i];
-        }
-        row
-    }
-
-    fn make_arr(len: usize, head: &[Node]) -> Vec<Node> {
-        let mut arr = Vec::new();
-        arr.resize(len, Node::default());
-        for i in 0..head.len() {
-            arr[i] = head[i]
-        }
-        arr
-    }
-
     #[test]
-    fn test_find_placeable_pos() {
-        let mut trie = Trie::new();
-        assert_eq!(trie.find_placeable_pos(&make_row(&[DUMMY1])), 1);
-        trie.arr = make_arr(ROW_LEN, &[DUMMY1, EMP, DUMMY1, DUMMY1]);
-        assert_eq!(trie.find_placeable_pos(&make_row(&[DUMMY1, EMP, DUMMY1])), 4);
-        trie.arr = [Node { base: 0, check: 0, ptr: 0 }; ROW_LEN].to_vec();
-        assert_eq!(trie.find_placeable_pos(&make_row(&[DUMMY1, EMP, DUMMY1])), ROW_LEN);
-    }
-
-    #[test]
-    fn test_place() {
-        let mut trie = Trie::new();
-        trie.arr = make_arr(ROW_LEN, &[DUMMY1, EMP, DUMMY1, DUMMY1]);
-        trie.place(&make_row(&[DUMMY1, EMP, DUMMY1]));
-        let ans = make_arr(ROW_LEN+4, &[DUMMY1, EMP, DUMMY1, DUMMY1, DUMMY1, EMP, DUMMY1]);
-        assert_eq!(trie.arr, ans);
-    }
-
-    #[test]
-    fn test_pursue() {
-        let mut trie = Trie::new();
-        trie.arr = [
-            // root
-            Node { base: 1, check: NOWHERE - 1, ptr: 0 },
-            // 1 ~ 3
-            Node { base: 0, check: NOWHERE, ptr: 0 }, Node { base: 4, check: 0, ptr: 0 }, Node { base: 6, check: 0, ptr: 0 },
-            // 4 ~ 5
-            Node { base: 0, check: NOWHERE, ptr: 0 }, Node { base: 6, check: 2, ptr: 0 },
-            // 6
-            Node { base: 7, check: 3, ptr: 0 },
-            // 7
-            Node { base: 8, check: 5, ptr: 0 }
-        ].to_vec();
-        assert_eq!(trie.pursue(&vec![0, 1]), Err((0, 0)));
-        assert_eq!(trie.pursue(&vec![1, 1]), Ok(5));
-        assert_eq!(trie.pursue(&vec![1, 1, 0]), Err((5, 2)));
-        assert_eq!(trie.pursue(&vec![1, 2]), Err((2, 1)));
-        assert_eq!(trie.pursue(&vec![2, 0, 1]), Err((6, 2)));
-        assert_eq!(trie.pursue(&vec![2, 0]), Ok(6));
-        assert_eq!(trie.pursue(&vec![1, 1, 1]), Ok(7));
-    }
-
-    #[test]
-    fn test_add() {
+    fn test_add_find() {
         let mut trie = Trie::new();
         let w1 = WordInfo { id: 0, cost: 1, class: Class::default() };
         let w2 = WordInfo { id: 0, cost: 2, class: Class::default() };
