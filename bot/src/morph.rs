@@ -109,7 +109,7 @@ impl Trie {
         buf
     }
 
-    fn mov(&mut self, from: usize, to: usize) {
+    fn update_children_base(&mut self, from: usize, to: usize) {
         let base = self.arr[from].base;
         if base != NOWHERE {
             for i in base..base+ROW_LEN {
@@ -118,8 +118,6 @@ impl Trie {
                 }
             }
         }
-        self.arr[to] = self.arr[from];
-        self.arr[from] = Node::default();
     }
 }
 #[cfg(test)]
@@ -146,7 +144,7 @@ mod test_low_level_trie {
     }
 
     #[test]
-    fn test_mov() {
+    fn test_update_children_base() {
         let mut trie = Trie::new();
         trie.arr = make_arr(ROW_LEN, &[
             Node { base: NOWHERE, check: NOWHERE, ptr: 1 },
@@ -155,25 +153,21 @@ mod test_low_level_trie {
             Node { base: NOWHERE, check: NOWHERE, ptr: 4 },
             Node { base: NOWHERE, check: 1, ptr: 5 },
         ]);
-        trie.mov(0, 5);
-        assert_eq!(trie.arr,
-            make_arr(ROW_LEN, &[
-                Node::default(),
-                Node { base: 2, check: 0, ptr: 2 },
-                Node { base: NOWHERE, check: 1, ptr: 3 },
-                Node { base: NOWHERE, check: NOWHERE, ptr: 4 },
-                Node { base: NOWHERE, check: 1, ptr: 5 },
-                Node { base: NOWHERE, check: NOWHERE, ptr: 1 },
+        trie.update_children_base(0, 5);
+        assert_eq!(trie.arr, make_arr(ROW_LEN, &[
+            Node { base: NOWHERE, check: NOWHERE, ptr: 1 },
+            Node { base: 2, check: 0, ptr: 2 },
+            Node { base: NOWHERE, check: 1, ptr: 3 },
+            Node { base: NOWHERE, check: NOWHERE, ptr: 4 },
+            Node { base: NOWHERE, check: 1, ptr: 5 },
         ]));
-        trie.mov(1, 0);
-        assert_eq!(trie.arr,
-            make_arr(ROW_LEN, &[
-                Node { base: 2, check: 0, ptr: 2 },
-                Node::default(),
-                Node { base: NOWHERE, check: 0, ptr: 3 },
-                Node { base: NOWHERE, check: NOWHERE, ptr: 4 },
-                Node { base: NOWHERE, check: 0, ptr: 5 },
-                Node { base: NOWHERE, check: NOWHERE, ptr: 1 },
+        trie.update_children_base(1, 0);
+        assert_eq!(trie.arr, make_arr(ROW_LEN, &[
+            Node { base: NOWHERE, check: NOWHERE, ptr: 1 },
+            Node { base: 2, check: 0, ptr: 2 },
+            Node { base: NOWHERE, check: 0, ptr: 3 },
+            Node { base: NOWHERE, check: NOWHERE, ptr: 4 },
+            Node { base: NOWHERE, check: 0, ptr: 5 },
         ]));
     }
 }
