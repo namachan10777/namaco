@@ -119,6 +119,23 @@ impl Trie {
             }
         }
     }
+
+    fn mov_row(&mut self, check: usize, to: usize) {
+        let base = self.arr[check].base;
+        let mut buf = [Node::default(); ROW_LEN];
+        for i in 0..ROW_LEN {
+            if self.arr[base+i].check == check {
+                self.update_children_base(base+i, to+i);
+                buf[i] = self.arr[base+i];
+                self.arr[base+i] = Node::default();
+            }
+        }
+        for i in 0..ROW_LEN {
+            if buf[i].check != NOWHERE {
+                self.arr[to+i] = buf[i];
+            }
+        }
+    }
 }
 #[cfg(test)]
 mod test_low_level_trie {
@@ -168,6 +185,31 @@ mod test_low_level_trie {
             Node { base: NOWHERE, check: 0, ptr: 3 },
             Node { base: NOWHERE, check: NOWHERE, ptr: 4 },
             Node { base: NOWHERE, check: 0, ptr: 5 },
+        ]));
+    }
+
+    #[test]
+    fn test_mov_row() {
+        let mut trie = Trie::new();
+        trie.arr = make_arr(ROW_LEN+10, &[
+            Node { base: 1, check: 0, ptr: NOWHERE },
+            Node { base: NOWHERE, check: 0, ptr: 1 },
+            Node { base: 3, check: 0, ptr: 2 },
+            Node { base: NOWHERE, check: 2, ptr: 3 },
+            Node { base: NOWHERE, check: NOWHERE, ptr: NOWHERE },
+            Node { base: NOWHERE, check: 2, ptr: 5 },
+        ]);
+        trie.mov_row(0, 6);
+        assert_eq!(trie.arr,
+            make_arr(ROW_LEN+10, &[
+                Node { base: 1, check: 0, ptr: NOWHERE },
+                Node::default(),
+                Node::default(),
+                Node { base: NOWHERE, check: 7, ptr: 3 },
+                Node { base: NOWHERE, check: NOWHERE, ptr: NOWHERE },
+                Node { base: NOWHERE, check: 7, ptr: 5 },
+                Node { base: NOWHERE, check: 0, ptr: 1 },
+                Node { base: 3, check: 0, ptr: 2 },
         ]));
     }
 }
