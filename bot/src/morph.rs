@@ -51,6 +51,7 @@ struct WordInfo {
 }
 
 const NOWHERE: usize = usize::MAX;
+const UNKNOWN: usize = usize::MAX-2;
 const ROW_LEN: usize = 256;
 
 type Row = [Node; ROW_LEN];
@@ -287,14 +288,16 @@ impl Trie {
     }
     
     fn push_out(&mut self, occupy_idx: usize) {
-        let occupy_parent = self.arr[self.arr[occupy_idx].check];
-        let occupy_row = self.extract_row(occupy_parent.base, occupy_parent.check);
-        self.erase(occupy_parent.base, occupy_parent.check);
+        let parent_idx = self.arr[occupy_idx].check;
+        let parent = self.arr[parent_idx];
+        let brothers = self.extract_row(parent.base, parent_idx);
         // 再配置防止に
-        self.arr[occupy_idx].check = 0;
-        let occupy_base = self.place(&occupy_row);
-        self.arr[occupy_parent.check].base = occupy_base;
-        self.arr[occupy_idx].check = NOWHERE;
+        self.arr[occupy_idx].check = UNKNOWN;
+        let new_base = self.find_placeable_pos(parent_idx, &brothers);
+        self.arr[occupy_idx].check = parent_idx;
+        self.mov_row(parent_idx, new_base);
+
+        self.arr[parent_idx].base = new_base;
     }
 }
 #[cfg(test)]
@@ -346,6 +349,40 @@ mod test_middle_level_trie {
         trie.place(&make_row(&[DUMMY1, EMP, DUMMY1]));
         let ans = make_arr(ROW_LEN*2, &[DUMMY1, EMP, DUMMY1, DUMMY1, DUMMY1, EMP, DUMMY1]);
         assert_eq!(trie.arr, ans);
+    }
+
+    #[test]
+    fn test_push_out() {
+        let mut trie = Trie::new();
+        trie.arr = make_arr(ROW_LEN*2, &[
+            Node { base: 1, check: NOWHERE-1, ptr: NOWHERE },
+            Node { base: 2, check: 0, ptr: NOWHERE },
+            Node { base: 4, check: 1, ptr: NOWHERE },
+            Node { base: NOWHERE, check: 1, ptr: NOWHERE },
+            Node::default(),
+            Node::default(),
+            Node { base: NOWHERE, check: 2, ptr: NOWHERE },
+        ]);
+        trie.push_out(2);
+        assert_eq!(trie.arr, make_arr(ROW_LEN*2, &[
+            Node { base: 1, check: NOWHERE-1, ptr: NOWHERE },
+            Node { base: 3, check: 0, ptr: NOWHERE },
+            Node::default(),
+            Node { base: 4, check: 1, ptr: NOWHERE },
+            Node { base: NOWHERE, check: 1, ptr: NOWHERE },
+            Node::default(),
+            Node { base: NOWHERE, check: 3, ptr: NOWHERE },
+        ]));
+        trie.push_out(3);
+        assert_eq!(trie.arr, make_arr(ROW_LEN*2, &[
+            Node { base: 1, check: NOWHERE-1, ptr: NOWHERE },
+            Node { base: 4, check: 0, ptr: NOWHERE },
+            Node::default(),
+            Node::default(),
+            Node { base: 4, check: 1, ptr: NOWHERE },
+            Node { base: NOWHERE, check: 1, ptr: NOWHERE },
+            Node { base: NOWHERE, check: 4, ptr: NOWHERE },
+        ]));
     }
 }
 
