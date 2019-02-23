@@ -232,6 +232,16 @@ impl Trie {
         Ok(child_id)
     }
 
+    fn placeable(&mut self, offset: usize, row: &Row) -> bool {
+        for j in 0..ROW_LEN {
+            // 衝突があると再配置不可
+            if row[j].check != NOWHERE && self.arr[offset + j].check != NOWHERE {
+                return false
+            }
+        }
+        return true
+    }
+
     // TODO 高速化
     // octetで指定されたoctedへの遷移だけを持つrowを配置する。
     fn find_placeable_pos(&mut self, nodes: &Row) -> usize {
@@ -251,30 +261,15 @@ impl Trie {
         };
 
         for i in self.footprint[row_class]..(self.arr.len() - ROW_LEN) {
-            let mut placeable = true;
-            for j in 0..nodes.len() {
-                // 衝突があると再配置不可
-                if nodes[j].check != NOWHERE && self.arr[i + j].check != NOWHERE {
-                    placeable = false;
-                    break
-                }
-            }
-            if placeable {
+            if self.placeable(i, &nodes) {
                 self.footprint[row_class] = i;
                 return i
             }
         }
-        for i in (self.arr.len() - nodes.len())..(self.arr.len()+nodes.len()) {
-            let mut placeable = true;
-            for j in 0..(self.arr.len() - i) {
-                // 衝突があると再配置不可
-                if nodes[j].check != NOWHERE && self.arr[i + j].check != NOWHERE {
-                    placeable = false;
-                    break
-                }
-            }
-            if placeable {
-                self.arr.resize(i + nodes.len(), Node::default());
+        self.arr.resize(self.arr.len() + ROW_LEN, Node::default());
+        for i in (self.arr.len() - ROW_LEN * 2)..(self.arr.len()+nodes.len()) {
+            if self.placeable(i, &nodes) {
+                self.footprint[row_class] = i;
                 return i
             }
         }
@@ -345,7 +340,7 @@ mod test_middle_level_trie {
         let mut trie = Trie::new();
         trie.arr = make_arr(ROW_LEN, &[DUMMY1, EMP, DUMMY1, DUMMY1]);
         trie.place(&make_row(&[DUMMY1, EMP, DUMMY1]));
-        let ans = make_arr(ROW_LEN+4, &[DUMMY1, EMP, DUMMY1, DUMMY1, DUMMY1, EMP, DUMMY1]);
+        let ans = make_arr(ROW_LEN*2, &[DUMMY1, EMP, DUMMY1, DUMMY1, DUMMY1, EMP, DUMMY1]);
         assert_eq!(trie.arr, ans);
     }
 }
@@ -409,19 +404,6 @@ impl Trie {
 mod trie_test {
     use super::*;
 
-    #[test]
-    fn test_add_find() {
-        let mut trie = Trie::new();
-        let w1 = WordInfo { id: 0, cost: 1, class: Class::default() };
-        let w2 = WordInfo { id: 0, cost: 2, class: Class::default() };
-        let w3 = WordInfo { id: 0, cost: 3, class: Class::default() };
-        trie.add(&vec![0], w1.clone());
-        trie.add(&vec![0, 1], w2.clone());
-        trie.add(&vec![1, 2, 3], w3.clone());
-        assert_eq!(trie.find(&vec![0]), Some(w1));
-        assert_eq!(trie.find(&vec![0, 1]), Some(w2));
-        assert_eq!(trie.find(&vec![1, 2, 3]), Some(w3));
-    }
 }
 
 use std::fs;
