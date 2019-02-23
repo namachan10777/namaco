@@ -232,10 +232,10 @@ impl Trie {
         Ok(child_id)
     }
 
-    fn placeable(&mut self, offset: usize, row: &Row) -> bool {
+    fn placeable(&mut self, ignore: usize, offset: usize, row: &Row) -> bool {
         for j in 0..ROW_LEN {
             // 衝突があると再配置不可
-            if row[j].check != NOWHERE && self.arr[offset + j].check != NOWHERE {
+            if row[j].check != NOWHERE && self.arr[offset + j].check != NOWHERE && self.arr[offset + j].check != ignore {
                 return false
             }
         }
@@ -244,7 +244,7 @@ impl Trie {
 
     // TODO 高速化
     // octetで指定されたoctedへの遷移だけを持つrowを配置する。
-    fn find_placeable_pos(&mut self, nodes: &Row) -> usize {
+    fn find_placeable_pos(&mut self, ignore: usize, nodes: &Row) -> usize {
 
         let enable_cnt = cnt_enable(nodes);
         let row_class = if enable_cnt < 2 {
@@ -261,14 +261,14 @@ impl Trie {
         };
 
         for i in self.footprint[row_class]..(self.arr.len() - ROW_LEN) {
-            if self.placeable(i, &nodes) {
+            if self.placeable(ignore, i, &nodes) {
                 self.footprint[row_class] = i;
                 return i
             }
         }
         self.arr.resize(self.arr.len() + ROW_LEN, Node::default());
         for i in (self.arr.len() - ROW_LEN * 2)..(self.arr.len()+nodes.len()) {
-            if self.placeable(i, &nodes) {
+            if self.placeable(ignore, i, &nodes) {
                 self.footprint[row_class] = i;
                 return i
             }
@@ -277,7 +277,7 @@ impl Trie {
     }
 
     fn place(&mut self, nodes: &Row) -> usize {
-        let p = self.find_placeable_pos(&nodes);
+        let p = self.find_placeable_pos(NOWHERE, &nodes);
         for i in 0..nodes.len() {
             if nodes[i].check != NOWHERE {
                 self.arr[i+p] = nodes[i];
@@ -304,11 +304,15 @@ mod test_middle_level_trie {
     #[test]
     fn test_find_placeable_pos() {
         let mut trie = Trie::new();
-        assert_eq!(trie.find_placeable_pos(&make_row(&[DUMMY1])), 1);
+        assert_eq!(trie.find_placeable_pos(NOWHERE, &make_row(&[DUMMY1])), 1);
         trie.arr = make_arr(ROW_LEN, &[DUMMY1, EMP, DUMMY1, DUMMY1]);
-        assert_eq!(trie.find_placeable_pos(&make_row(&[DUMMY1, EMP, DUMMY1])), 4);
+        assert_eq!(trie.find_placeable_pos(NOWHERE, &make_row(&[DUMMY1, EMP, DUMMY1])), 4);
         trie.arr = [Node { base: 0, check: 0, ptr: 0 }; ROW_LEN].to_vec();
-        assert_eq!(trie.find_placeable_pos(&make_row(&[DUMMY1, EMP, DUMMY1])), ROW_LEN);
+        assert_eq!(trie.find_placeable_pos(NOWHERE, &make_row(&[DUMMY1, EMP, DUMMY1])), ROW_LEN);
+        trie.arr = make_arr(ROW_LEN, &[DUMMY1, EMP, DUMMY1, DUMMY1]);
+        assert_eq!(trie.find_placeable_pos(0, &make_row(&[DUMMY1, EMP, DUMMY1])), 0);
+        trie.arr = make_arr(ROW_LEN, &[DUMMY1, DUMMY2, DUMMY1, DUMMY1]);
+        assert_eq!(trie.find_placeable_pos(1, &make_row(&[DUMMY1, EMP, EMP, DUMMY1])), 1);
     }
 
     #[test]
