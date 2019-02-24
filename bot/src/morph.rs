@@ -434,7 +434,13 @@ impl Trie {
 
     fn find(&mut self, octets: &Vec<u8>) -> Option<WordInfo> {
         if let Ok(idx) = self.pursue(octets) {
-            Some(self.infos[self.arr[idx].ptr].clone())
+            let info_idx = self.arr[idx].ptr;
+            if info_idx == NOWHERE {
+                None
+            }
+            else {
+                Some(self.infos[info_idx].clone())
+            }
         }
         else {
             None
