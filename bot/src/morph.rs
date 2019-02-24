@@ -407,14 +407,6 @@ impl Trie {
                     self.push_out(current);
                 }
             }
-            // 終端ノード
-            else {
-                // 子のスペースを確保し、非終端ノードに
-                let mut row = [Node::default(); ROW_LEN];
-                row[octets[pursued] as usize].check = common;
-                let base = self.place(&row);
-                self.arr[common].base = base;
-            }
 
             let mut parent = common;
 
