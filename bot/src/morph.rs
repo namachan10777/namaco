@@ -399,7 +399,7 @@ impl Trie {
     }
 
 
-    fn add(&mut self, octets: &[u8], info: WordInfo) {
+    fn add(&mut self, octets: &[u8], info: WordInfo) -> Result<(), String> {
         if let Err((common, mut pursued)) = self.pursue(octets) {
             let mut parent = common;
             if self.arr[common].base != NOWHERE {
@@ -432,6 +432,10 @@ impl Trie {
 
             self.infos.push(info);
             self.arr[parent].ptr = self.infos.len() - 1;
+            Ok(())
+        }
+        else {
+            Err(format!("key conflict: {:?}", octets))
         }
     }
 
