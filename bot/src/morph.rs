@@ -387,6 +387,11 @@ mod test_middle_level_trie {
     }
 }
 
+#[derive(Clone, Debug, PartialEq)]
+enum TrieErr {
+    KeyConflict,
+}
+
 impl Trie {
     fn new() -> Trie {
         let mut arr = vec![Node::default(); ROW_LEN+1].to_vec();
@@ -399,7 +404,7 @@ impl Trie {
     }
 
 
-    fn add(&mut self, octets: &[u8], info: WordInfo) -> Result<(), String> {
+    fn add(&mut self, octets: &[u8], info: WordInfo) -> Result<(), TrieErr> {
         if let Err((common, mut pursued)) = self.pursue(octets) {
             let mut parent = common;
             if self.arr[common].base != NOWHERE {
@@ -435,7 +440,7 @@ impl Trie {
             Ok(())
         }
         else {
-            Err(format!("key conflict: {:?}", octets))
+            Err(TrieErr::KeyConflict)
         }
     }
 
@@ -471,6 +476,7 @@ mod trie_test {
         assert_eq!(trie.add(&vec![0], w1.clone()), Ok(()));
         assert_eq!(trie.find(&vec![0]), Some(w1.clone()));
         assert_eq!(trie.find(&vec![1]), None);
+        assert_eq!(trie.add(&vec![0], w1.clone()), Err(TrieErr::KeyConflict));
         assert_eq!(trie.add(&vec![0, 1], w2.clone()), Ok(()));
         assert_eq!(trie.find(&vec![0]), Some(w1.clone()));
         assert_eq!(trie.find(&vec![1]), None);
@@ -482,6 +488,7 @@ mod trie_test {
         assert_eq!(trie.find(&vec![0, 1]), Some(w2.clone()));
         assert_eq!(trie.find(&vec![0, 0]), Some(w3.clone()));
         assert_eq!(trie.add(&vec![0, 1, 2], w4.clone()), Ok(()));
+        assert_eq!(trie.add(&vec![0, 1, 2], w1.clone()), Err(TrieErr::KeyConflict));
         assert_eq!(trie.find(&vec![0]), Some(w1.clone()));
         assert_eq!(trie.find(&vec![1]), None);
         assert_eq!(trie.find(&vec![0, 1]), Some(w2.clone()));
@@ -503,6 +510,7 @@ mod trie_test {
         assert_eq!(trie.find(&vec![0, 1, 2]), Some(w4.clone()));
         assert_eq!(trie.find(&vec![0, 1, 0]), Some(w5.clone()));
         assert_eq!(trie.find(&vec![2]), Some(w6.clone()));
+        assert_eq!(trie.add(&vec![2], w1.clone()), Err(TrieErr::KeyConflict));
     }
 }
 
