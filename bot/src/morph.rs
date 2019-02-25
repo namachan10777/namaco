@@ -287,7 +287,7 @@ impl Trie {
         p
     }
     
-    fn push_out(&mut self, occupy_idx: usize) {
+    fn push_out(&mut self, occupy_idx: usize) -> usize {
         let parent_idx = self.arr[occupy_idx].check;
         let parent = self.arr[parent_idx];
         let brothers = self.extract_row(parent.base, parent_idx);
@@ -298,6 +298,7 @@ impl Trie {
         self.mov_row(parent_idx, new_base);
 
         self.arr[parent_idx].base = new_base;
+        new_base
     }
 }
 #[cfg(test)]
@@ -399,17 +400,27 @@ impl Trie {
 
 
     fn add(&mut self, octets: &[u8], info: WordInfo) {
-        if let Err((common, pursued)) = self.pursue(octets) {
+        if let Err((common, mut pursued)) = self.pursue(octets) {
+            let mut parent = common;
             if self.arr[common].base != NOWHERE {
                 let current = self.arr[common].base + octets[pursued] as usize;
                 // 非終端ノードかつ衝突あり
                 if self.arr[current].check != NOWHERE {
-                    self.push_out(current);
+                    let common = if self.arr[common].check == self.arr[current].check {
+                        // 子を既存のrowに追加
+                        let old_base = self.arr[self.arr[common].check].base as i64;
+                        let new_base = self.push_out(current) as i64;
+                        (common as i64 - old_base + new_base) as usize
+                    }
+                    else {
+                        self.push_out(current);
+                        common
+                    };
+                    self.arr[current].check = common;
+                    pursued += 1;
+                    parent = current;
                 }
             }
-
-            let mut parent = common;
-
             for i in pursued..octets.len() {
                 // rowを追加しながらparentを更新していく
                 let mut row = [Node::default(); ROW_LEN];
