@@ -44,7 +44,7 @@ struct Class {
 }
 
 #[derive(Clone, Debug, PartialEq)]
-struct WordInfo {
+pub struct WordInfo {
     id: i16,
     cost: i16,
     class: Class,
@@ -388,7 +388,7 @@ mod test_middle_level_trie {
 }
 
 #[derive(Clone, Debug, PartialEq)]
-enum TrieErr {
+pub enum TrieErr {
     KeyConflict,
 }
 
@@ -450,7 +450,7 @@ impl Trie {
         }
     }
 
-    fn find(&mut self, octets: &[u8]) -> Option<WordInfo> {
+    pub fn find(&self, octets: &[u8]) -> Option<WordInfo> {
         if let Ok(idx) = self.pursue(octets) {
             let info_idx = self.arr[idx].ptr;
             if info_idx == NOWHERE {
@@ -560,7 +560,7 @@ pub fn build_trie(f: &fs::File) -> Trie {
                     subdesc: subdesc,
                 },
             };
-            trie.add(&key, info);
+            trie.add(&key, info).ok();
             buf.clear();
         }
         else {
