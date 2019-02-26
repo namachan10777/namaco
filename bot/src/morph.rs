@@ -425,6 +425,12 @@ impl Trie {
                     pursued += 1;
                     parent = current;
                 }
+                // 非終端ノード
+                else {
+                    self.arr[current].check = common;
+                    pursued += 1;
+                    parent = current;
+                }
             }
             for i in pursued..octets.len() {
                 // rowを追加しながらparentを更新していく
