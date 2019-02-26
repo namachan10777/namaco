@@ -511,6 +511,14 @@ mod trie_test {
         assert_eq!(trie.find(&[0, 1, 0]), Some(w5.clone()));
         assert_eq!(trie.find(&[2]), Some(w6.clone()));
         assert_eq!(trie.add(&[2], w1.clone()), Err(TrieErr::KeyConflict));
+
+        let mut trie2 = Trie::new();
+        assert_eq!(trie2.add(&[0, 1, 5, 1], w1.clone()), Ok(()));
+        assert_eq!(trie2.add(&[0, 1, 0, 2], w2.clone()), Ok(()));
+        assert_eq!(trie2.add(&[0, 1, 4, 3], w3.clone()), Ok(()));
+        assert_eq!(trie2.find(&[0, 1, 5, 1]), Some(w1.clone()));
+        assert_eq!(trie2.find(&[0, 1, 0, 2]), Some(w2.clone()));
+        assert_eq!(trie2.find(&[0, 1, 4, 3]), Some(w3.clone()));
     }
 }
 
