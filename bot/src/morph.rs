@@ -530,19 +530,20 @@ mod trie_test {
 
 use std::fs;
 use std::io;
-use std::io::BufRead;
+use std::io::{BufRead, Write};
 
 pub fn build_trie(f: &fs::File) -> Trie {
     let mut trie = Trie::new();
     let mut reader = io::BufReader::new(f);
     let mut buf = String::new();
+    print!("loadin csv... ");
+    io::stdout().flush().unwrap();
     loop {
         if let Ok(len) = reader.read_line(&mut buf){
             if len == 0 {
                 break
             }
             let elms: Vec<&str> = buf.split(',').collect();
-            println!("adding: {:?}", elms[0]);
             let key = elms[0].as_bytes();
             let id: i16 = elms[1].parse().unwrap();
             let cost: i16 = elms[3].parse().unwrap();
@@ -567,6 +568,7 @@ pub fn build_trie(f: &fs::File) -> Trie {
             break
         }
     }
+    println!("done!");
     trie
 }
 
