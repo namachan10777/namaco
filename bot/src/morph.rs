@@ -545,7 +545,7 @@ pub fn build_trie(f: &fs::File) -> Trie {
             }
             let elms: Vec<&str> = buf.split(',').collect();
             let key = elms[0].as_bytes();
-            let id: i16 = elms[1].parse().unwrap();
+            let id: i16 = elms[1].parse().unwrap_or(-1);
             let cost: i16 = elms[3].parse().unwrap();
             let class = elms[4].to_string();
             let subclass = elms[5].to_string();
