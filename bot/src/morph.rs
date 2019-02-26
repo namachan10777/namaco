@@ -444,7 +444,7 @@ impl Trie {
         }
     }
 
-    fn find(&mut self, octets: &Vec<u8>) -> Option<WordInfo> {
+    fn find(&mut self, octets: &[u8]) -> Option<WordInfo> {
         if let Ok(idx) = self.pursue(octets) {
             let info_idx = self.arr[idx].ptr;
             if info_idx == NOWHERE {
@@ -473,44 +473,44 @@ mod trie_test {
         let w5 = WordInfo { id: 4, cost: 0, class: empty_class.clone() };
         let w6 = WordInfo { id: 5, cost: 0, class: empty_class.clone() };
         let mut trie = Trie::new();
-        assert_eq!(trie.add(&vec![0], w1.clone()), Ok(()));
-        assert_eq!(trie.find(&vec![0]), Some(w1.clone()));
-        assert_eq!(trie.find(&vec![1]), None);
-        assert_eq!(trie.add(&vec![0], w1.clone()), Err(TrieErr::KeyConflict));
-        assert_eq!(trie.add(&vec![0, 1], w2.clone()), Ok(()));
-        assert_eq!(trie.find(&vec![0]), Some(w1.clone()));
-        assert_eq!(trie.find(&vec![1]), None);
-        assert_eq!(trie.find(&vec![0, 1]), Some(w2.clone()));
-        assert_eq!(trie.find(&vec![0, 0]), None);
-        assert_eq!(trie.add(&vec![0, 0], w3.clone()), Ok(()));
-        assert_eq!(trie.find(&vec![0]), Some(w1.clone()));
-        assert_eq!(trie.find(&vec![1]), None);
-        assert_eq!(trie.find(&vec![0, 1]), Some(w2.clone()));
-        assert_eq!(trie.find(&vec![0, 0]), Some(w3.clone()));
-        assert_eq!(trie.add(&vec![0, 1, 2], w4.clone()), Ok(()));
-        assert_eq!(trie.add(&vec![0, 1, 2], w1.clone()), Err(TrieErr::KeyConflict));
-        assert_eq!(trie.find(&vec![0]), Some(w1.clone()));
-        assert_eq!(trie.find(&vec![1]), None);
-        assert_eq!(trie.find(&vec![0, 1]), Some(w2.clone()));
-        assert_eq!(trie.find(&vec![0, 0]), Some(w3.clone()));
-        assert_eq!(trie.find(&vec![0, 1, 2]), Some(w4.clone()));
-        assert_eq!(trie.find(&vec![0, 1, 0]), None);
-        assert_eq!(trie.add(&vec![0, 1, 0], w5.clone()), Ok(()));
-        assert_eq!(trie.find(&vec![0]), Some(w1.clone()));
-        assert_eq!(trie.find(&vec![1]), None);
-        assert_eq!(trie.find(&vec![0, 1]), Some(w2.clone()));
-        assert_eq!(trie.find(&vec![0, 0]), Some(w3.clone()));
-        assert_eq!(trie.find(&vec![0, 1, 2]), Some(w4.clone()));
-        assert_eq!(trie.find(&vec![0, 1, 0]), Some(w5.clone()));
-        assert_eq!(trie.add(&vec![2], w6.clone()), Ok(()));
-        assert_eq!(trie.find(&vec![0]), Some(w1.clone()));
-        assert_eq!(trie.find(&vec![1]), None);
-        assert_eq!(trie.find(&vec![0, 1]), Some(w2.clone()));
-        assert_eq!(trie.find(&vec![0, 0]), Some(w3.clone()));
-        assert_eq!(trie.find(&vec![0, 1, 2]), Some(w4.clone()));
-        assert_eq!(trie.find(&vec![0, 1, 0]), Some(w5.clone()));
-        assert_eq!(trie.find(&vec![2]), Some(w6.clone()));
-        assert_eq!(trie.add(&vec![2], w1.clone()), Err(TrieErr::KeyConflict));
+        assert_eq!(trie.add(&[0], w1.clone()), Ok(()));
+        assert_eq!(trie.find(&[0]), Some(w1.clone()));
+        assert_eq!(trie.find(&[1]), None);
+        assert_eq!(trie.add(&[0], w1.clone()), Err(TrieErr::KeyConflict));
+        assert_eq!(trie.add(&[0, 1], w2.clone()), Ok(()));
+        assert_eq!(trie.find(&[0]), Some(w1.clone()));
+        assert_eq!(trie.find(&[1]), None);
+        assert_eq!(trie.find(&[0, 1]), Some(w2.clone()));
+        assert_eq!(trie.find(&[0, 0]), None);
+        assert_eq!(trie.add(&[0, 0], w3.clone()), Ok(()));
+        assert_eq!(trie.find(&[0]), Some(w1.clone()));
+        assert_eq!(trie.find(&[1]), None);
+        assert_eq!(trie.find(&[0, 1]), Some(w2.clone()));
+        assert_eq!(trie.find(&[0, 0]), Some(w3.clone()));
+        assert_eq!(trie.add(&[0, 1, 2], w4.clone()), Ok(()));
+        assert_eq!(trie.add(&[0, 1, 2], w1.clone()), Err(TrieErr::KeyConflict));
+        assert_eq!(trie.find(&[0]), Some(w1.clone()));
+        assert_eq!(trie.find(&[1]), None);
+        assert_eq!(trie.find(&[0, 1]), Some(w2.clone()));
+        assert_eq!(trie.find(&[0, 0]), Some(w3.clone()));
+        assert_eq!(trie.find(&[0, 1, 2]), Some(w4.clone()));
+        assert_eq!(trie.find(&[0, 1, 0]), None);
+        assert_eq!(trie.add(&[0, 1, 0], w5.clone()), Ok(()));
+        assert_eq!(trie.find(&[0]), Some(w1.clone()));
+        assert_eq!(trie.find(&[1]), None);
+        assert_eq!(trie.find(&[0, 1]), Some(w2.clone()));
+        assert_eq!(trie.find(&[0, 0]), Some(w3.clone()));
+        assert_eq!(trie.find(&[0, 1, 2]), Some(w4.clone()));
+        assert_eq!(trie.find(&[0, 1, 0]), Some(w5.clone()));
+        assert_eq!(trie.add(&[2], w6.clone()), Ok(()));
+        assert_eq!(trie.find(&[0]), Some(w1.clone()));
+        assert_eq!(trie.find(&[1]), None);
+        assert_eq!(trie.find(&[0, 1]), Some(w2.clone()));
+        assert_eq!(trie.find(&[0, 0]), Some(w3.clone()));
+        assert_eq!(trie.find(&[0, 1, 2]), Some(w4.clone()));
+        assert_eq!(trie.find(&[0, 1, 0]), Some(w5.clone()));
+        assert_eq!(trie.find(&[2]), Some(w6.clone()));
+        assert_eq!(trie.add(&[2], w1.clone()), Err(TrieErr::KeyConflict));
     }
 }
 
