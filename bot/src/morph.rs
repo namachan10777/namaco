@@ -643,4 +643,26 @@ mod test_trie_build {
     }
 }
 
+struct Matrix {
+    arr: Vec<i64>
+}
+
+impl Matrix {
+    fn new(size: usize) -> Matrix {
+        let mut arr = Vec::new();
+        arr.resize(size * size, 0);
+        Matrix { arr }
+    }
+}
+
+#[cfg(test)]
+mod test_matrix {
+    use super::*;
+    #[test]
+    fn test_new() {
+        assert_eq!(Matrix::new(2).arr.len(), 2 * 2);
+        assert_eq!(Matrix::new(100).arr.len(), 100 * 100);
+    }
+}
+
 pub struct Splitter  {}
