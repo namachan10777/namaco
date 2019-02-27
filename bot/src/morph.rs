@@ -465,7 +465,13 @@ impl Trie {
             },
             Ok(id) => {
                 let ptr = self.arr[id].ptr;
-                self.infos[ptr] = self.infos[ptr].clone().push(info);
+                if ptr == NOWHERE {
+                    self.infos.push(WordAttr::Single(info));
+                    self.arr[id].ptr = self.infos.len() - 1;
+                }
+                else {
+                    self.infos[ptr] = self.infos[ptr].clone().push(info);
+                }
             }
         }
     }
