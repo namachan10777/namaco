@@ -103,6 +103,16 @@ fn make_arr(len: usize, head: &[Node]) -> Vec<Node> {
     arr
 }
 
+fn count_children(row: &Row) -> usize {
+    let mut cnt = 0;
+    for i in 0..ROW_LEN {
+        if row[i].check != NOWHERE {
+            cnt += 1;
+        }
+    }
+    cnt
+}
+
 // test helper
 const DUMMY1: Node = Node{base: 0, check: 0, ptr: 0};
 const DUMMY2: Node = Node{base: 0, check: 1, ptr: 0};
@@ -430,19 +440,34 @@ impl Trie {
                     let current = self.arr[common].base + octets[pursued] as usize;
                     // 非終端ノードかつ衝突あり
                     if self.arr[current].check != NOWHERE {
-                        let common = if self.arr[common].check == self.arr[current].check {
-                            // 子を既存のrowに追加
-                            let old_base = self.arr[self.arr[common].check].base as i64;
-                            let new_base = self.push_out(current) as i64;
-                            (common as i64 - old_base + new_base) as usize
+                        let occupy = self.arr[self.arr[current].check];
+                        let push_out_cost = count_children(&self.extract_row(occupy.base, self.arr[current].check));
+                        let mov_borther_cost = count_children(&self.extract_row(self.arr[common].base, common));
+                        if mov_borther_cost > push_out_cost {
+                            let common = if self.arr[common].check == self.arr[current].check {
+                                // 子を既存のrowに追加
+                                let old_base = self.arr[self.arr[common].check].base as i64;
+                                let new_base = self.push_out(current) as i64;
+                                (common as i64 - old_base + new_base) as usize
+                            }
+                            else {
+                                self.push_out(current);
+                                common
+                            };
+                            self.arr[current].check = common;
+                            parent = current;
                         }
                         else {
-                            self.push_out(current);
-                            common
-                        };
-                        self.arr[current].check = common;
+                            let mut new_row = self.extract_row(self.arr[common].base, common);
+                            new_row[octets[pursued] as usize].check = common;
+                            let new_base = self.find_placeable_pos(common, &new_row);
+                            let new_current = new_base + octets[pursued] as usize;
+                            self.mov_row(common, new_base);
+                            self.arr[common].base = new_base;
+                            self.arr[new_current].check = common;
+                            parent = new_current;
+                        }
                         pursued += 1;
-                        parent = current;
                     }
                     // 非終端ノード
                     else {
