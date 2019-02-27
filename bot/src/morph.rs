@@ -26,11 +26,29 @@ impl Default for Node {
     }
 }
 
+#[derive(Clone, Debug, PartialEq)]
+pub enum WordAttr {
+    Single(WordInfo),
+    Homonym(Vec<WordInfo>)
+}
+
+impl WordAttr {
+    fn push(self: WordAttr, info: WordInfo) -> WordAttr {
+        match self {
+            WordAttr::Single(info_) => WordAttr::Homonym(vec![info_, info]),
+            WordAttr::Homonym(mut infos) => {
+                infos.push(info);
+                WordAttr::Homonym(infos)
+            }
+        }
+    }
+}
+
 pub struct Trie {
     // 圧縮済み遷移表
     arr: Vec<Node>,
     // 品詞辞書本体
-    infos: Vec<WordInfo>,
+    infos: Vec<WordAttr>,
     // 0~1, 1~4, 4~32, 32~
     footprint: [usize; 4],
 }
@@ -404,53 +422,55 @@ impl Trie {
     }
 
 
-    fn add(&mut self, octets: &[u8], info: WordInfo) -> Result<(), TrieErr> {
-        if let Err((common, mut pursued)) = self.pursue(octets) {
-            let mut parent = common;
-            if self.arr[common].base != NOWHERE {
-                let current = self.arr[common].base + octets[pursued] as usize;
-                // 非終端ノードかつ衝突あり
-                if self.arr[current].check != NOWHERE {
-                    let common = if self.arr[common].check == self.arr[current].check {
-                        // 子を既存のrowに追加
-                        let old_base = self.arr[self.arr[common].check].base as i64;
-                        let new_base = self.push_out(current) as i64;
-                        (common as i64 - old_base + new_base) as usize
+    fn add(&mut self, octets: &[u8], info: WordInfo) {
+        match self.pursue(octets) {
+            Err((common, mut pursued)) => {
+                let mut parent = common;
+                if self.arr[common].base != NOWHERE {
+                    let current = self.arr[common].base + octets[pursued] as usize;
+                    // 非終端ノードかつ衝突あり
+                    if self.arr[current].check != NOWHERE {
+                        let common = if self.arr[common].check == self.arr[current].check {
+                            // 子を既存のrowに追加
+                            let old_base = self.arr[self.arr[common].check].base as i64;
+                            let new_base = self.push_out(current) as i64;
+                            (common as i64 - old_base + new_base) as usize
+                        }
+                        else {
+                            self.push_out(current);
+                            common
+                        };
+                        self.arr[current].check = common;
+                        pursued += 1;
+                        parent = current;
                     }
+                    // 非終端ノード
                     else {
-                        self.push_out(current);
-                        common
-                    };
-                    self.arr[current].check = common;
-                    pursued += 1;
-                    parent = current;
+                        self.arr[current].check = common;
+                        pursued += 1;
+                        parent = current;
+                    }
                 }
-                // 非終端ノード
-                else {
-                    self.arr[current].check = common;
-                    pursued += 1;
-                    parent = current;
+                for i in pursued..octets.len() {
+                    // rowを追加しながらparentを更新していく
+                    let mut row = [Node::default(); ROW_LEN];
+                    row[octets[i] as usize].check = parent;
+                    let base = self.place(&row);
+                    self.arr[parent].base = base;
+                    parent = base + octets[i] as usize;
                 }
-            }
-            for i in pursued..octets.len() {
-                // rowを追加しながらparentを更新していく
-                let mut row = [Node::default(); ROW_LEN];
-                row[octets[i] as usize].check = parent;
-                let base = self.place(&row);
-                self.arr[parent].base = base;
-                parent = base + octets[i] as usize;
-            }
 
-            self.infos.push(info);
-            self.arr[parent].ptr = self.infos.len() - 1;
-            Ok(())
-        }
-        else {
-            Err(TrieErr::KeyConflict)
+                self.infos.push(WordAttr::Single(info));
+                self.arr[parent].ptr = self.infos.len() - 1;
+            },
+            Ok(id) => {
+                let ptr = self.arr[id].ptr;
+                self.infos[ptr] = self.infos[ptr].clone().push(info);
+            }
         }
     }
 
-    pub fn find(&self, octets: &[u8]) -> Option<WordInfo> {
+    pub fn find(&self, octets: &[u8]) -> Option<WordAttr> {
         if let Ok(idx) = self.pursue(octets) {
             let info_idx = self.arr[idx].ptr;
             if info_idx == NOWHERE {
@@ -479,52 +499,53 @@ mod trie_test {
         let w5 = WordInfo { id: 4, cost: 0, class: empty_class.clone() };
         let w6 = WordInfo { id: 5, cost: 0, class: empty_class.clone() };
         let mut trie = Trie::new();
-        assert_eq!(trie.add(&[0], w1.clone()), Ok(()));
-        assert_eq!(trie.find(&[0]), Some(w1.clone()));
+        trie.add(&[0], w1.clone());
+        assert_eq!(trie.find(&[0]), Some(WordAttr::Single(w1.clone())));
         assert_eq!(trie.find(&[1]), None);
-        assert_eq!(trie.add(&[0], w1.clone()), Err(TrieErr::KeyConflict));
-        assert_eq!(trie.add(&[0, 1], w2.clone()), Ok(()));
-        assert_eq!(trie.find(&[0]), Some(w1.clone()));
+        trie.add(&[0], w1.clone());
+        assert_eq!(trie.find(&[0]), Some(WordAttr::Homonym(vec![w1.clone(), w1.clone()])));
+        trie.add(&[0, 1], w2.clone());
+        assert_eq!(trie.find(&[0]), Some(WordAttr::Homonym(vec![w1.clone(), w1.clone()])));
         assert_eq!(trie.find(&[1]), None);
-        assert_eq!(trie.find(&[0, 1]), Some(w2.clone()));
+        assert_eq!(trie.find(&[0, 1]), Some(WordAttr::Single(w2.clone())));
         assert_eq!(trie.find(&[0, 0]), None);
-        assert_eq!(trie.add(&[0, 0], w3.clone()), Ok(()));
-        assert_eq!(trie.find(&[0]), Some(w1.clone()));
+        trie.add(&[0, 0], w3.clone());
+        assert_eq!(trie.find(&[0]), Some(WordAttr::Homonym(vec![w1.clone(), w1.clone()])));
         assert_eq!(trie.find(&[1]), None);
-        assert_eq!(trie.find(&[0, 1]), Some(w2.clone()));
-        assert_eq!(trie.find(&[0, 0]), Some(w3.clone()));
-        assert_eq!(trie.add(&[0, 1, 2], w4.clone()), Ok(()));
-        assert_eq!(trie.add(&[0, 1, 2], w1.clone()), Err(TrieErr::KeyConflict));
-        assert_eq!(trie.find(&[0]), Some(w1.clone()));
+        assert_eq!(trie.find(&[0, 1]), Some(WordAttr::Single(w2.clone())));
+        assert_eq!(trie.find(&[0, 0]), Some(WordAttr::Single(w3.clone())));
+        trie.add(&[0, 1, 2], w4.clone());
+        assert_eq!(trie.find(&[0]), Some(WordAttr::Homonym(vec![w1.clone(), w1.clone()])));
         assert_eq!(trie.find(&[1]), None);
-        assert_eq!(trie.find(&[0, 1]), Some(w2.clone()));
-        assert_eq!(trie.find(&[0, 0]), Some(w3.clone()));
-        assert_eq!(trie.find(&[0, 1, 2]), Some(w4.clone()));
+        assert_eq!(trie.find(&[0, 1]), Some(WordAttr::Single(w2.clone())));
+        assert_eq!(trie.find(&[0, 0]), Some(WordAttr::Single(w3.clone())));
+        assert_eq!(trie.find(&[0, 1, 2]), Some(WordAttr::Single(w4.clone())));
         assert_eq!(trie.find(&[0, 1, 0]), None);
-        assert_eq!(trie.add(&[0, 1, 0], w5.clone()), Ok(()));
-        assert_eq!(trie.find(&[0]), Some(w1.clone()));
+        trie.add(&[0, 1, 0], w5.clone());
+        assert_eq!(trie.find(&[0]), Some(WordAttr::Homonym(vec![w1.clone(), w1.clone()])));
         assert_eq!(trie.find(&[1]), None);
-        assert_eq!(trie.find(&[0, 1]), Some(w2.clone()));
-        assert_eq!(trie.find(&[0, 0]), Some(w3.clone()));
-        assert_eq!(trie.find(&[0, 1, 2]), Some(w4.clone()));
-        assert_eq!(trie.find(&[0, 1, 0]), Some(w5.clone()));
-        assert_eq!(trie.add(&[2], w6.clone()), Ok(()));
-        assert_eq!(trie.find(&[0]), Some(w1.clone()));
+        assert_eq!(trie.find(&[0, 1]), Some(WordAttr::Single(w2.clone())));
+        assert_eq!(trie.find(&[0, 0]), Some(WordAttr::Single(w3.clone())));
+        assert_eq!(trie.find(&[0, 1, 2]), Some(WordAttr::Single(w4.clone())));
+        assert_eq!(trie.find(&[0, 1, 0]), Some(WordAttr::Single(w5.clone())));
+        trie.add(&[2], w6.clone());
+        assert_eq!(trie.find(&[0]), Some(WordAttr::Homonym(vec![w1.clone(), w1.clone()])));
         assert_eq!(trie.find(&[1]), None);
-        assert_eq!(trie.find(&[0, 1]), Some(w2.clone()));
-        assert_eq!(trie.find(&[0, 0]), Some(w3.clone()));
-        assert_eq!(trie.find(&[0, 1, 2]), Some(w4.clone()));
-        assert_eq!(trie.find(&[0, 1, 0]), Some(w5.clone()));
-        assert_eq!(trie.find(&[2]), Some(w6.clone()));
-        assert_eq!(trie.add(&[2], w1.clone()), Err(TrieErr::KeyConflict));
+        assert_eq!(trie.find(&[0, 1]), Some(WordAttr::Single(w2.clone())));
+        assert_eq!(trie.find(&[0, 0]), Some(WordAttr::Single(w3.clone())));
+        assert_eq!(trie.find(&[0, 1, 2]), Some(WordAttr::Single(w4.clone())));
+        assert_eq!(trie.find(&[0, 1, 0]), Some(WordAttr::Single(w5.clone())));
+        assert_eq!(trie.find(&[2]), Some(WordAttr::Single(w6.clone())));
+        trie.add(&[2], w1.clone());
+        assert_eq!(trie.find(&[2]), Some(WordAttr::Homonym(vec![w6.clone(), w1.clone()])));
 
         let mut trie2 = Trie::new();
-        assert_eq!(trie2.add(&[0, 1, 5, 1], w1.clone()), Ok(()));
-        assert_eq!(trie2.add(&[0, 1, 0, 2], w2.clone()), Ok(()));
-        assert_eq!(trie2.add(&[0, 1, 4, 3], w3.clone()), Ok(()));
-        assert_eq!(trie2.find(&[0, 1, 5, 1]), Some(w1.clone()));
-        assert_eq!(trie2.find(&[0, 1, 0, 2]), Some(w2.clone()));
-        assert_eq!(trie2.find(&[0, 1, 4, 3]), Some(w3.clone()));
+        trie2.add(&[0, 1, 5, 1], w1.clone());
+        trie2.add(&[0, 1, 0, 2], w2.clone());
+        trie2.add(&[0, 1, 4, 3], w3.clone());
+        assert_eq!(trie2.find(&[0, 1, 5, 1]), Some(WordAttr::Single(w1.clone())));
+        assert_eq!(trie2.find(&[0, 1, 0, 2]), Some(WordAttr::Single(w2.clone())));
+        assert_eq!(trie2.find(&[0, 1, 4, 3]), Some(WordAttr::Single(w3.clone())));
     }
 }
 
@@ -561,7 +582,7 @@ pub fn build_trie(f: &fs::File) -> Trie {
                     subdesc: subdesc,
                 },
             };
-            trie.add(&key, info).ok();
+            trie.add(&key, info);
             buf.clear();
         }
         else {
