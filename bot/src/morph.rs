@@ -699,4 +699,24 @@ mod test_matrix {
     }
 }
 
+pub fn build_matrix(size: usize, f: &fs::File) -> Matrix {
+    let mut matrix = Matrix::new(size);
+    let mut reader = io::BufReader::new(f);
+    let mut buf = String::new();
+    loop {
+        if let Ok(len) = reader.read_line(&mut buf){
+            if len == 0 {
+                break
+            }
+            let elms: Vec<&str> = buf.split(' ').collect();
+            let lid: usize = elms[0].parse().unwrap();
+            let rid: usize = elms[1].parse().unwrap();
+            let cost: i64 = elms[2].parse().unwrap();
+            matrix.write(lid, rid, cost);
+            buf.clear();
+        }
+    }
+    matrix
+}
+
 pub struct Splitter  {}
