@@ -26,6 +26,21 @@ impl Default for Node {
     }
 }
 
+#[derive(Clone, Debug, PartialEq, Default)]
+struct Class {
+    class: String,
+    subclass: String,
+    desc: String,
+    subdesc: String,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct WordInfo {
+    id: i16,
+    cost: i16,
+    class: Class,
+}
+
 #[derive(Clone, Debug, PartialEq)]
 pub enum WordAttr {
     Single(WordInfo),
@@ -42,30 +57,6 @@ impl WordAttr {
             }
         }
     }
-}
-
-pub struct Trie {
-    // 圧縮済み遷移表
-    arr: Vec<Node>,
-    // 品詞辞書本体
-    infos: Vec<WordAttr>,
-    // 0~1, 1~4, 4~32, 32~
-    footprint: [usize; 4],
-}
-
-#[derive(Clone, Debug, PartialEq, Default)]
-struct Class {
-    class: String,
-    subclass: String,
-    desc: String,
-    subdesc: String,
-}
-
-#[derive(Clone, Debug, PartialEq)]
-pub struct WordInfo {
-    id: i16,
-    cost: i16,
-    class: Class,
 }
 
 const NOWHERE: usize = usize::MAX;
@@ -118,6 +109,15 @@ const DUMMY1: Node = Node{base: 0, check: 0, ptr: 0};
 const DUMMY2: Node = Node{base: 0, check: 1, ptr: 0};
 const EMP: Node = Node{base: NOWHERE, check: NOWHERE, ptr: NOWHERE};
 
+pub struct Trie {
+    // 圧縮済み遷移表
+    arr: Vec<Node>,
+    // 品詞辞書本体
+    infos: Vec<WordAttr>,
+    // 0~1, 1~4, 4~32, 32~
+    footprint: [usize; 4],
+}
+
 // low level
 impl Trie {
     fn erase(&mut self, start: usize, parent: usize) {
@@ -128,6 +128,7 @@ impl Trie {
         }
     }
     
+    // TODO 高速化
     fn extract_row(&self, start: usize, parent: usize) -> Row {
         let mut buf = [Node::default(); ROW_LEN];
         for i in 0..ROW_LEN {
@@ -152,15 +153,18 @@ impl Trie {
     fn mov_row(&mut self, check: usize, to: usize) {
         let base = self.arr[check].base;
         let mut buf = [Node::default(); ROW_LEN];
+        // 親を退避してから書かないと元の領域と移転先の領域が被っている場合に親が消える
         for i in 0..ROW_LEN {
             if self.arr[base+i].check == check {
                 self.update_children_base(base+i, to+i);
+                // 親の退避を同時に行う
                 buf[i] = self.arr[base+i];
                 self.arr[base+i] = Node::default();
             }
         }
         for i in 0..ROW_LEN {
             if buf[i].check != NOWHERE {
+                // 親を書く
                 self.arr[to+i] = buf[i];
             }
         }
@@ -295,6 +299,7 @@ impl Trie {
                 return i
             }
         }
+        // 越えそうな場合は先に延長
         self.arr.resize(self.arr.len() + ROW_LEN, Node::default());
         for i in (self.arr.len() - ROW_LEN * 2)..(self.arr.len()+nodes.len()) {
             if self.placeable(ignore, i, &nodes) {
@@ -431,7 +436,7 @@ impl Trie {
         }
     }
 
-
+    // FIXME 読み辛い
     fn add(&mut self, octets: &[u8], info: WordInfo) {
         match self.pursue(octets) {
             Err((common, mut pursued)) => {
@@ -441,9 +446,12 @@ impl Trie {
                     // 非終端ノードかつ衝突あり
                     if self.arr[current].check != NOWHERE {
                         let occupy = self.arr[self.arr[current].check];
+                        // push_outとmov_brotherで動かすことになる子の数を計算
                         let push_out_cost = count_children(&self.extract_row(occupy.base, self.arr[current].check));
                         let mov_borther_cost = count_children(&self.extract_row(self.arr[common].base, common));
+                        // 子が少ない方を動かす
                         if mov_borther_cost > push_out_cost {
+                            // push_out対象に親を含む場合はcommonを更新
                             let common = if self.arr[common].check == self.arr[current].check {
                                 // 子を既存のrowに追加
                                 let old_base = self.arr[self.arr[common].check].base as i64;
@@ -458,6 +466,7 @@ impl Trie {
                             parent = current;
                         }
                         else {
+                            // 兄弟を再配置
                             let mut new_row = self.extract_row(self.arr[common].base, common);
                             new_row[octets[pursued] as usize].check = common;
                             let new_base = self.find_placeable_pos(common, &new_row);
@@ -469,13 +478,14 @@ impl Trie {
                         }
                         pursued += 1;
                     }
-                    // 非終端ノード
+                    // 非終端ノード(衝突がないので書くだけ)
                     else {
                         self.arr[current].check = common;
                         pursued += 1;
                         parent = current;
                     }
                 }
+                // 終端ノードの場合はただ付け加えるだけなのでpursuedを進めない
                 for i in pursued..octets.len() {
                     // rowを追加しながらparentを更新していく
                     let mut row = [Node::default(); ROW_LEN];
