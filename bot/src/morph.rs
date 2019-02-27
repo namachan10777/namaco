@@ -76,6 +76,7 @@ fn cnt_enable(nodes: &Row) -> usize {
 }
 
 // test helper
+#[allow(dead_code)]
 fn make_row(head: &[Node]) -> [Node; ROW_LEN] {
     let mut row = [Node::default(); ROW_LEN];
     for i in 0..head.len() {
@@ -85,6 +86,7 @@ fn make_row(head: &[Node]) -> [Node; ROW_LEN] {
 }
 
 // test helper
+#[allow(dead_code)]
 fn make_arr(len: usize, head: &[Node]) -> Vec<Node> {
     let mut arr = Vec::new();
     arr.resize(len, Node::default());
@@ -105,8 +107,11 @@ fn count_children(row: &Row) -> usize {
 }
 
 // test helper
+#[allow(dead_code)]
 const DUMMY1: Node = Node{base: 0, check: 0, ptr: 0};
+#[allow(dead_code)]
 const DUMMY2: Node = Node{base: 0, check: 1, ptr: 0};
+#[allow(dead_code)]
 const EMP: Node = Node{base: NOWHERE, check: NOWHERE, ptr: NOWHERE};
 
 pub struct Trie {
@@ -120,14 +125,6 @@ pub struct Trie {
 
 // low level
 impl Trie {
-    fn erase(&mut self, start: usize, parent: usize) {
-        for i in start..start+ROW_LEN {
-            if self.arr[i].check == parent {
-                self.arr[i] = Node::default();
-            }
-        }
-    }
-    
     // TODO 高速化
     fn extract_row(&self, start: usize, parent: usize) -> Row {
         let mut buf = [Node::default(); ROW_LEN];
@@ -173,17 +170,6 @@ impl Trie {
 #[cfg(test)]
 mod test_low_level_trie {
     use super::*;
-    #[test]
-    fn test_erace() {
-        let mut trie = Trie::new();
-        trie.arr = make_arr(ROW_LEN+1, &[DUMMY1, EMP, DUMMY2, DUMMY1]);
-        trie.erase(1, 0);
-        assert_eq!(trie.arr, make_arr(ROW_LEN+1, &[DUMMY1, EMP, DUMMY2, EMP]));
-        trie.arr = make_arr(ROW_LEN, &[DUMMY1, EMP, DUMMY2, DUMMY1]);
-        trie.erase(0, 0);
-        assert_eq!(trie.arr, make_arr(ROW_LEN, &[EMP, EMP, DUMMY2, EMP]));
-    }
-
     #[test]
     fn test_extract_row() {
         let mut trie = Trie::new();
@@ -636,8 +622,6 @@ pub fn build_trie(f: &fs::File) -> Trie {
 
 #[cfg(test)]
 mod test_trie_build {
-    use super::*;
-
     #[test]
     fn test_trie_build() {
     }
