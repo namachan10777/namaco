@@ -627,7 +627,7 @@ mod test_trie_build {
     }
 }
 
-struct Matrix {
+pub struct Matrix {
     arr: Vec<i64>,
     size: usize,
 }
@@ -641,6 +641,10 @@ impl Matrix {
 
     fn cost(&self, lid: usize, rid: usize) -> i64 {
         self.arr[lid * self.size + rid]
+    }
+
+    fn write(&mut self, lid: usize, rid: usize, val: i64) {
+        self.arr[lid * self.size + rid] = val
     }
 }
 
@@ -671,6 +675,24 @@ mod test_matrix {
              9, 10, 11, 12,
             13, 14, 15, 16,
         ];
+        assert_eq!(matrix.cost(1, 1), 6);
+        assert_eq!(matrix.cost(0, 2), 3);
+        assert_eq!(matrix.cost(3, 3), 16);
+    }
+
+    #[test]
+    fn test_write() {
+        let mut matrix = Matrix::new(3);
+        matrix.write(1, 1, 5);
+        matrix.write(0, 2, 3);
+        matrix.write(2, 2, 9);
+        assert_eq!(matrix.cost(1, 1), 5);
+        assert_eq!(matrix.cost(0, 2), 3);
+        assert_eq!(matrix.cost(2, 2), 9);
+        let mut matrix = Matrix::new(4);
+        matrix.write(1, 1, 6);
+        matrix.write(0, 2, 3);
+        matrix.write(3, 3, 16);
         assert_eq!(matrix.cost(1, 1), 6);
         assert_eq!(matrix.cost(0, 2), 3);
         assert_eq!(matrix.cost(3, 3), 16);
