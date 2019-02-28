@@ -719,4 +719,57 @@ pub fn build_matrix(size: usize, f: &fs::File) -> Matrix {
     matrix
 }
 
+use std::rc::Rc;
+
+#[derive(Debug, Clone, PartialEq)]
+enum List<T> {
+    Cons(T, Rc<List<T>>),
+    Nil
+}
+impl<T> List<T> {
+    fn new() -> Self {
+        List::Nil
+    }
+
+    fn hd(&self) -> Option<&T> {
+        match self {
+            List::Cons(t, _) => Some(t),
+            List::Nil => None
+        }
+    }
+
+    fn tl(&self) -> Option<&List<T>> {
+        match self {
+            List::Cons(_, tl) => Some(tl),
+            List::Nil => None
+        }
+    }
+
+    fn push(self, value: T) -> Self {
+        List::Cons(value, Rc::new(self))
+    }
+}
+#[cfg(test)]
+mod test_list {
+    use super::*;
+    #[test]
+    fn test() {
+        let l : List<i32> = List::new();
+        let l = l.push(0);
+        let l2 = l.clone();
+        let l = l.push(1);
+        assert_eq!(l.hd().unwrap().clone(), 1);
+        assert_eq!(l.tl().unwrap().hd().unwrap().clone(), 0);
+        assert_eq!(l.tl().unwrap().tl().unwrap().clone(), List::Nil);
+        assert_eq!(l.tl().unwrap().tl().unwrap().hd(), None);
+        assert_eq!(l.tl().unwrap().tl().unwrap().tl(), None);
+        assert_eq!(l.tl().unwrap(), &l2);
+    }
+}
+
+fn viterbi(input: &[u8], dict: &Trie, matrix: &Matrix) -> List<(Vec<u8>, WordInfo)> {
+
+    List::Nil
+}
+
 pub struct Splitter  {}
