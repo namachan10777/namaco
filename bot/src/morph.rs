@@ -767,9 +767,22 @@ mod test_list {
     }
 }
 
-fn viterbi(input: &[u8], dict: &Trie, matrix: &Matrix) -> List<(Vec<u8>, WordInfo)> {
+type Path = List<(Vec<u8>, WordInfo)>;
+use std::i64;
 
-    List::Nil
+fn viterbi(input: &[u8], dict: &Trie, matrix: &Matrix) -> Path {
+    // 位置 * size + 語長で最短経路をメモ化(bi-gramマルコフモデルなので
+    // (累積コスト, 経路)
+    // 位置をp、語調をw、入力の長さをlとする。
+    // ある点p'から探索可能な単語全てに対し、p' = w + pとなるw,pからメモ化された最短経路を読む。
+    // 最短経路と現在の語から最小のコストとなる経路を計算し、それを現在の語までの最短経路として確定させる。
+    // 最初のノードにはそこまでの連接コストが存在しないため、最初のノードだけ生起コストでメモを書き込む
+    // l = p + wとなるp, wの組み合わせから最小の経路を探し、それが解となる。
+    let mut memo: Vec<(i64, Path)> = Vec::new();
+    let len = input.len();
+    memo.resize(len*len, (i64::MAX, List::Nil));
+    let path: List<(Vec<u8>, WordInfo)> = List::new();
+    path
 }
 
 pub struct Splitter  {}
