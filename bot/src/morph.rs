@@ -37,8 +37,20 @@ struct Class {
 #[derive(Clone, Debug, PartialEq)]
 pub struct WordInfo {
     id: i16,
-    cost: i16,
+    cost: i64,
     class: Class,
+}
+
+use std::i16;
+
+impl Default for WordInfo {
+    fn default() -> WordInfo {
+        WordInfo {
+            id: i16::MAX,
+            cost: i64::MAX,
+            class: Class::default(),
+        }
+    }
 }
 
 const NOWHERE: usize = usize::MAX;
@@ -747,19 +759,93 @@ mod test_list {
 type Path = List<(Vec<u8>, WordInfo)>;
 use std::i64;
 
-fn viterbi(input: &[u8], dict: &Trie, matrix: &Matrix) -> Path {
-    // 位置 * size + 語長で最短経路をメモ化(bi-gramマルコフモデルなので
-    // (累積コスト, 経路)
-    // 位置をp、語調をw、入力の長さをlとする。
-    // ある点p'から探索可能な単語全てに対し、p' = w + pとなるw,pからメモ化された最短経路を読む。
-    // 最短経路と現在の語から最小のコストとなる経路を計算し、それを現在の語までの最短経路として確定させる。
-    // 最初のノードにはそこまでの連接コストが存在しないため、最初のノードだけ生起コストでメモを書き込む
-    // l = p + wとなるp, wの組み合わせから最小の経路を探し、それが解となる。
-    let mut memo: Vec<(i64, Path)> = Vec::new();
-    let len = input.len();
-    memo.resize(len*len, (i64::MAX, List::Nil));
-    let path: List<(Vec<u8>, WordInfo)> = List::new();
-    path
+#[derive(Clone, Debug)]
+struct Square {
+    parent_p: usize,
+    parent_id: usize,
+    len: usize,
+    cost: i64,
+    info: WordInfo,
+}
+
+impl Default for Square {
+    fn default() -> Square {
+        Square {
+            parent_p: usize::MAX,
+            parent_id: usize::MAX,
+            len: 0,
+            cost: i64::MAX,
+            info: WordInfo::default()
+        }
+    }
+}
+
+// minを最小値とし、terminalを終端とする語句の辞書を引いた結果を列挙する
+fn enumerate_means<'a>(input: &'a [u8], dict: &Trie, min: usize, terminal: usize) -> Vec<(&'a [u8], WordInfo, usize, usize, usize)> {
+    let mut means = Vec::new();
+    for i in min..terminal {
+        let word = input.get(i..terminal).unwrap();
+        let mut mean_id = 0;
+        for mean in dict.find(&word) {
+            means.push((
+                word,
+                mean,
+                i,
+                terminal-i,
+                mean_id
+            ));
+            mean_id += 1;
+        }
+    }
+    means
+}
+
+fn viterbi(input: &[u8], dict: &Trie, matrix: &Matrix)  {
+    let mut len = input.len();
+    let mut memo: Vec<Vec<Vec<Square>>> = Vec::new();
+    memo.resize_with(len, || { let mut vec = Vec::new(); vec.resize_with(len, || Vec::new()); vec});
+    for i in 1..len {
+        let word = input.get(0..i).unwrap();
+        for info in dict.find(&word) {
+            memo[0][i].push(Square {
+                parent_id: 0,
+                parent_p: 0,
+                cost: info.cost,
+                len: i,
+                info: WordInfo::default(),
+            });
+        }
+    }
+
+    for p_p in 1..len {
+        for p_len in 1..(len-p_p) {
+            let p_word = input.get(p_p..p_p+p_len).unwrap();
+            let p_means = dict.find(&p_word);
+            memo[p_p][p_len].resize(p_means.len(), Square::default());
+            for p_id in 0..p_means.len() {
+                let mut square = Square::default();
+                for b_p in 0..p_p-1 {
+                    for b_id in 0..memo[b_p][p_p-b_p].len() {
+                        let b_square = memo[b_p][p_p-b_p][b_id];
+                        let cost =
+                            b_square.cost
+                            + p_means[p_id].cost
+                            + matrix.cost(b_square.info.id as usize, p_means[p_id].id as usize);
+                        if square.cost > cost {
+                            square = Square {
+                                parent_p: b_p,
+                                parent_id: b_id,
+                                len: p_p - b_p,
+                                cost: cost,
+                                info: p_means[p_id].clone(),
+                            };
+                        }
+                    }
+                }
+                memo[p_p][p_len][p_id] = square;
+            }
+        }
+    }
 }
 
 pub struct Splitter  {}
