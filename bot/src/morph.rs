@@ -34,11 +34,19 @@ struct Class {
     subdesc: String,
 }
 
-#[derive(Clone, Debug, PartialEq)]
+use std::fmt::Debug;
+use std::fmt;
+
+#[derive(Clone, PartialEq)]
 pub struct WordInfo {
     id: i16,
     cost: i64,
     class: Class,
+}
+impl Debug for WordInfo {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "WordInfo {{ id: {}, cost: {} }}", self.id, self.cost)
+    }
 }
 
 use std::i16;
@@ -582,8 +590,8 @@ pub fn build_trie(f: &fs::File) -> Trie {
             }
             let elms: Vec<&str> = buf.split(',').collect();
             let key = elms[0].as_bytes();
-            let id: i16 = elms[1].parse().unwrap_or(-1);
-            let cost: i16 = elms[3].parse().unwrap();
+            let id: i16 = elms[2].parse().unwrap_or(-1);
+            let cost: i64 = elms[3].parse().unwrap();
             let class = elms[4].to_string();
             let subclass = elms[5].to_string();
             let desc = elms[6].to_string();
@@ -759,23 +767,19 @@ mod test_list {
 type Path = List<(Vec<u8>, WordInfo)>;
 use std::i64;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 struct Square {
-    parent_p: usize,
-    parent_id: usize,
-    len: usize,
     cost: i64,
     info: WordInfo,
+    stack: Vec<(WordInfo, usize, usize)>,
 }
 
 impl Default for Square {
     fn default() -> Square {
         Square {
-            parent_p: usize::MAX,
-            parent_id: usize::MAX,
-            len: 0,
             cost: i64::MAX,
-            info: WordInfo::default()
+            info: WordInfo::default(),
+            stack: Vec::new(),
         }
     }
 }
@@ -800,51 +804,103 @@ fn enumerate_means<'a>(input: &'a [u8], dict: &Trie, min: usize, terminal: usize
     means
 }
 
-fn viterbi(input: &[u8], dict: &Trie, matrix: &Matrix)  {
-    let mut len = input.len();
+fn make_dp(input: &[u8]) -> Vec<Vec<Vec<Square>>> {
     let mut memo: Vec<Vec<Vec<Square>>> = Vec::new();
+    let len = input.len();
     memo.resize_with(len, || { let mut vec = Vec::new(); vec.resize_with(len, || Vec::new()); vec});
-    for i in 1..len {
-        let word = input.get(0..i).unwrap();
-        for info in dict.find(&word) {
-            memo[0][i].push(Square {
-                parent_id: 0,
-                parent_p: 0,
-                cost: info.cost,
-                len: i,
-                info: WordInfo::default(),
+    memo
+}
+
+fn fill_dp(input: &[u8], dict: &Trie, matrix: &Matrix, dp: &mut Vec<Vec<Vec<Square>>>) -> Square {
+    let len = input.len();
+    for succ_end in 1..len+1 {
+        let succ_word = input.get(0..succ_end).unwrap();
+        for succ_info in dict.find(succ_word) {
+            dp[succ_end-1][0].push(Square {
+                cost: succ_info.clone().cost,
+                info: succ_info.clone(),
+                stack: vec![(succ_info, 0, succ_end)],
             });
         }
-    }
-
-    for p_p in 1..len {
-        for p_len in 1..(len-p_p) {
-            let p_word = input.get(p_p..p_p+p_len).unwrap();
-            let p_means = dict.find(&p_word);
-            memo[p_p][p_len].resize(p_means.len(), Square::default());
-            for p_id in 0..p_means.len() {
-                let mut square = Square::default();
-                for b_p in 0..p_p-1 {
-                    for b_id in 0..memo[b_p][p_p-b_p].len() {
-                        let b_square = memo[b_p][p_p-b_p][b_id];
-                        let cost =
-                            b_square.cost
-                            + p_means[p_id].cost
-                            + matrix.cost(b_square.info.id as usize, p_means[p_id].id as usize);
-                        if square.cost > cost {
-                            square = Square {
-                                parent_p: b_p,
-                                parent_id: b_id,
-                                len: p_p - b_p,
-                                cost: cost,
-                                info: p_means[p_id].clone(),
+        for succ_begin in 1..succ_end {
+            let succ_word = input.get(succ_begin..succ_end).unwrap();
+            for succ_info in dict.find(succ_word) {
+                let mut best = Square {
+                    cost: i64::MAX,
+                    info: WordInfo::default(),
+                    stack: Vec::new(),
+                };
+                let prev_end = succ_begin;
+                for prev_begin in 0..prev_end {
+                    for prev in  &dp[prev_end-1][prev_begin] {
+                        let cost = prev.cost
+                            + matrix.cost(prev.info.id as usize, succ_info.clone().id as usize)
+                            + succ_info.clone().cost;
+                        if cost < best.cost {
+                            let mut stack = prev.stack.clone();
+                            stack.push((succ_info.clone(), succ_begin, succ_end));
+                            best = Square {
+                                cost,
+                                info: succ_info.clone(),
+                                stack
                             };
                         }
                     }
                 }
-                memo[p_p][p_len][p_id] = square;
+                if best.cost < i64::MAX {
+                    dp[succ_end-1][succ_begin].push(best);
+                }
             }
         }
+    }
+    let mut min = Square::default();
+    for i in 0..len {
+        for square in &dp[len-1][i] {
+            if square.cost < min.cost {
+                min = square.clone();
+            }
+        }
+    }
+    min
+}
+
+use std::str;
+
+fn print_morph(input: &[u8], square: Square) {
+    println!("cost: {}", square.cost);
+    for (info, begin, end) in square.stack {
+        println!("{:?}: {:?}", str::from_utf8(input.get(begin..end).unwrap()).unwrap(), info);
+    }
+}
+
+#[cfg(test)]
+mod test_viterbi {
+    use super::*;
+    #[test]
+    fn test_dp_initialize () {
+        let mut trie = Trie::new();
+        let empty_class = Class { class: "".to_string(), subclass: "".to_string(), desc: "".to_string(), subdesc: "".to_string() };
+        let a = WordInfo { id: 0, cost: 10, class: empty_class.clone() };
+        let b = WordInfo { id: 1, cost: 20, class: empty_class.clone() };
+        let ab = WordInfo { id: 2, cost: 20, class: empty_class.clone() };
+        let ba = WordInfo { id: 3, cost: 30, class: empty_class.clone() };
+        trie.add("a".as_bytes(), a);
+        trie.add("b".as_bytes(), b);
+        trie.add("ab".as_bytes(), ab);
+        trie.add("ba".as_bytes(), ba);
+        let mut matrix = Matrix::new(4);
+        matrix.arr = vec![
+            1, 2, 3, 4,
+            5, 6, 7, 8,
+            9, 10, 11, 12,
+            13, 14, 15, 16
+        ];
+        let input = "aabb".as_bytes();
+        let mut memo = make_dp(&input);
+        let result = fill_dp(&input, &trie, &matrix, &mut memo);
+        print_morph(&input, result.clone());
+        println!("{:?}", memo);
+        assert_eq!(result, Square::default());
     }
 }
 
