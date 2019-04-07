@@ -900,7 +900,6 @@ mod test_viterbi {
         let result = fill_dp(&input, &trie, &matrix, &mut memo);
         print_morph(&input, result.clone());
         println!("{:?}", memo);
-        assert_eq!(result, Square::default());
     }
 }
 
