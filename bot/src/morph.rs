@@ -718,53 +718,6 @@ pub fn build_matrix(size: usize, f: &fs::File) -> Matrix {
 
 use std::rc::Rc;
 
-#[derive(Debug, Clone, PartialEq)]
-enum List<T> {
-    Cons(T, Rc<List<T>>),
-    Nil
-}
-impl<T> List<T> {
-    fn new() -> Self {
-        List::Nil
-    }
-
-    fn hd(&self) -> Option<&T> {
-        match self {
-            List::Cons(t, _) => Some(t),
-            List::Nil => None
-        }
-    }
-
-    fn tl(&self) -> Option<&List<T>> {
-        match self {
-            List::Cons(_, tl) => Some(tl),
-            List::Nil => None
-        }
-    }
-
-    fn push(self, value: T) -> Self {
-        List::Cons(value, Rc::new(self))
-    }
-}
-#[cfg(test)]
-mod test_list {
-    use super::*;
-    #[test]
-    fn test() {
-        let l : List<i32> = List::new();
-        let l = l.push(0);
-        let l2 = l.clone();
-        let l = l.push(1);
-        assert_eq!(l.hd().unwrap().clone(), 1);
-        assert_eq!(l.tl().unwrap().hd().unwrap().clone(), 0);
-        assert_eq!(l.tl().unwrap().tl().unwrap().clone(), List::Nil);
-        assert_eq!(l.tl().unwrap().tl().unwrap().hd(), None);
-        assert_eq!(l.tl().unwrap().tl().unwrap().tl(), None);
-        assert_eq!(l.tl().unwrap(), &l2);
-    }
-}
-
-type Path = List<(Vec<u8>, WordInfo)>;
 use std::i64;
 
 #[derive(Clone, Debug, PartialEq)]
@@ -784,35 +737,10 @@ impl Default for Square {
     }
 }
 
-// minを最小値とし、terminalを終端とする語句の辞書を引いた結果を列挙する
-fn enumerate_means<'a>(input: &'a [u8], dict: &Trie, min: usize, terminal: usize) -> Vec<(&'a [u8], WordInfo, usize, usize, usize)> {
-    let mut means = Vec::new();
-    for i in min..terminal {
-        let word = input.get(i..terminal).unwrap();
-        let mut mean_id = 0;
-        for mean in dict.find(&word) {
-            means.push((
-                word,
-                mean,
-                i,
-                terminal-i,
-                mean_id
-            ));
-            mean_id += 1;
-        }
-    }
-    means
-}
-
-fn make_dp(input: &[u8]) -> Vec<Vec<Vec<Square>>> {
-    let mut memo: Vec<Vec<Vec<Square>>> = Vec::new();
+fn fill_dp(input: &[u8], dict: &Trie, matrix: &Matrix) -> (i64, Vec<(WordInfo, usize, usize)>) {
     let len = input.len();
-    memo.resize_with(len, || { let mut vec = Vec::new(); vec.resize_with(len, || Vec::new()); vec});
-    memo
-}
-
-fn fill_dp(input: &[u8], dict: &Trie, matrix: &Matrix, dp: &mut Vec<Vec<Vec<Square>>>) -> Square {
-    let len = input.len();
+    let mut dp: Vec<Vec<Vec<Square>>> = Vec::new();
+    dp.resize_with(len, || { let mut vec = Vec::new(); vec.resize_with(len, || Vec::new()); vec });
     for succ_end in 1..len+1 {
         let succ_word = input.get(0..succ_end).unwrap();
         for succ_info in dict.find(succ_word) {
@@ -861,16 +789,7 @@ fn fill_dp(input: &[u8], dict: &Trie, matrix: &Matrix, dp: &mut Vec<Vec<Vec<Squa
             }
         }
     }
-    min
-}
-
-use std::str;
-
-fn print_morph(input: &[u8], square: Square) {
-    println!("cost: {}", square.cost);
-    for (info, begin, end) in square.stack {
-        println!("{:?}: {:?}", str::from_utf8(input.get(begin..end).unwrap()).unwrap(), info);
-    }
+    (min.cost, min.stack)
 }
 
 #[cfg(test)]
