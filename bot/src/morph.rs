@@ -803,10 +803,10 @@ mod test_viterbi {
         let b = WordInfo { id: 1, cost: 20, class: empty_class.clone() };
         let ab = WordInfo { id: 2, cost: 20, class: empty_class.clone() };
         let ba = WordInfo { id: 3, cost: 30, class: empty_class.clone() };
-        trie.add("a".as_bytes(), a);
-        trie.add("b".as_bytes(), b);
-        trie.add("ab".as_bytes(), ab);
-        trie.add("ba".as_bytes(), ba);
+        trie.add("a".as_bytes(), a.clone());
+        trie.add("b".as_bytes(), b.clone());
+        trie.add("ab".as_bytes(), ab.clone());
+        trie.add("ba".as_bytes(), ba.clone());
         let mut matrix = Matrix::new(4);
         matrix.arr = vec![
             1, 2, 3, 4,
@@ -815,10 +815,28 @@ mod test_viterbi {
             13, 14, 15, 16
         ];
         let input = "aabb".as_bytes();
-        let mut memo = make_dp(&input);
-        let result = fill_dp(&input, &trie, &matrix, &mut memo);
-        print_morph(&input, result.clone());
-        println!("{:?}", memo);
+        assert_eq!(fill_dp(&input, &trie, &matrix),
+            (10 + 3 + 20 + 10 + 20, vec![
+                (a.clone(), 0, 1),
+                (ab.clone(), 1, 3),
+                (b.clone(), 3, 4),
+            ])
+        );
+
+        matrix.arr = vec![
+            1, 2, 30, 4,
+            5, 6, 7, 8,
+            9, 10, 11, 12,
+            13, 14, 15, 16
+        ];
+        assert_eq!(fill_dp(&input, &trie, &matrix),
+            (10 + 1 + 10 + 2 + 20 + 6 + 20, vec![
+                (a.clone(), 0, 1),
+                (a, 1, 2),
+                (b.clone(), 2, 3),
+                (b, 3, 4),
+            ])
+        );
     }
 }
 
