@@ -654,6 +654,7 @@ mod test_matrix {
         assert_eq!(Matrix::new(100).arr.len(), 100 * 100);
     }
 
+    #[test]
     fn test_cost() {
         let mut matrix = Matrix::new(3);
         matrix.arr = vec![
@@ -716,8 +717,6 @@ pub fn build_matrix(size: usize, f: &fs::File) -> Matrix {
     matrix
 }
 
-use std::rc::Rc;
-
 use std::i64;
 
 #[derive(Clone, Debug, PartialEq)]
@@ -737,6 +736,7 @@ impl Default for Square {
     }
 }
 
+#[allow(dead_code)]
 fn fill_dp(input: &[u8], dict: &Trie, matrix: &Matrix) -> (i64, Vec<(WordInfo, usize, usize)>) {
     let len = input.len();
     let mut dp: Vec<Vec<Vec<Square>>> = Vec::new();
