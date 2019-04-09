@@ -573,49 +573,67 @@ mod trie_test {
     }
 }
 
+impl Trie {
+    pub fn load_from_naist_jdic(f: &fs::File) -> Result<Trie, DictLoadErr> {
+        let mut trie = Trie::new();
+        let mut reader = io::BufReader::new(f);
+        let mut buf = String::new();
+        let mut line_cnt = 0;
+        match io::stdout().flush() {
+            Ok(_) => {},
+            Err(_) => { return Err(DictLoadErr::FailedToFlushIO); },
+        };
+        loop {
+            line_cnt += 1;
+            if let Ok(len) = reader.read_line(&mut buf){
+                if len == 0 {
+                    break
+                }
+                let elms: Vec<&str> = buf.split(',').collect();
+                if elms.len() < 8 {
+                    return Err(DictLoadErr::ParseError(line_cnt))
+                }
+                let key = elms[0].as_bytes();
+                let id: i16 = elms[2].parse().unwrap_or(-1);
+                let cost: i64 = match elms[3].parse() {
+                    Ok(cost) => cost,
+                    Err(_) => { return Err(DictLoadErr::ParseError(line_cnt)) }
+                };
+                let class = elms[4].to_string();
+                let subclass = elms[5].to_string();
+                let desc = elms[6].to_string();
+                let subdesc = elms[7].to_string();
+                let info = WordInfo {
+                    id: id,
+                    cost: cost,
+                    class: Class {
+                        class: class,
+                        subclass: subclass,
+                        desc: desc,
+                        subdesc: subdesc,
+                    },
+                };
+                trie.add(&key, info);
+                buf.clear();
+            }
+            else {
+                break
+            }
+        }
+        Ok(trie)
+    }
+}
+
 use std::fs;
 use std::io;
 use std::io::{BufRead, Write};
 
-pub fn build_trie(f: &fs::File) -> Trie {
-    let mut trie = Trie::new();
-    let mut reader = io::BufReader::new(f);
-    let mut buf = String::new();
-    print!("loadin csv... ");
-    io::stdout().flush().unwrap();
-    loop {
-        if let Ok(len) = reader.read_line(&mut buf){
-            if len == 0 {
-                break
-            }
-            let elms: Vec<&str> = buf.split(',').collect();
-            let key = elms[0].as_bytes();
-            let id: i16 = elms[2].parse().unwrap_or(-1);
-            let cost: i64 = elms[3].parse().unwrap();
-            let class = elms[4].to_string();
-            let subclass = elms[5].to_string();
-            let desc = elms[6].to_string();
-            let subdesc = elms[7].to_string();
-            let info = WordInfo {
-                id: id,
-                cost: cost,
-                class: Class {
-                    class: class,
-                    subclass: subclass,
-                    desc: desc,
-                    subdesc: subdesc,
-                },
-            };
-            trie.add(&key, info);
-            buf.clear();
-        }
-        else {
-            break
-        }
-    }
-    println!("done!");
-    trie
+#[derive(Debug)]
+pub enum DictLoadErr {
+    FailedToFlushIO,
+    ParseError(usize),
 }
+
 
 #[cfg(test)]
 mod test_trie_build {
@@ -744,7 +762,7 @@ impl Default for Square {
 }
 
 #[allow(dead_code)]
-fn fill_dp(input: &[u8], dict: &Trie, matrix: &Matrix) -> (i64, Vec<(WordInfo, usize, usize)>) {
+pub fn fill_dp(input: &[u8], dict: &Trie, matrix: &Matrix) -> (i64, Vec<(WordInfo, usize, usize)>) {
     let len = input.len();
     let mut dp: Vec<Vec<Vec<Square>>> = Vec::new();
     dp.resize_with(len, || { let mut vec = Vec::new(); vec.resize_with(len, || Vec::new()); vec });
