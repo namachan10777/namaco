@@ -9,7 +9,7 @@ fn main() {
     let dict_file = fs::File::open("./naist-jdic.csv").unwrap();
     let matrix_file = fs::File::open("./matrix.def").unwrap();
     let trie = bot::morph::Trie::load_from_naist_jdic(&dict_file).unwrap();
-    let matrix = bot::morph::build_matrix(&matrix_file).unwrap();
+    let matrix = bot::morph::Matrix::load_from_mecab_matrix(&matrix_file).unwrap();
     loop {
         let mut buf = String::new();
         io::stdin().read_line(&mut buf).ok();

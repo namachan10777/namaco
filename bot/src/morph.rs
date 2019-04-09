@@ -647,6 +647,12 @@ pub struct Matrix {
     size: usize,
 }
 
+#[derive(Debug)]
+pub enum MatrixLoadErr {
+    ParseErr(usize),
+    FileReadErr,
+}
+
 impl Matrix {
     fn new(size: usize) -> Matrix {
         let mut arr = Vec::new();
@@ -660,6 +666,47 @@ impl Matrix {
 
     fn write(&mut self, lid: usize, rid: usize, val: i64) {
         self.arr[lid * self.size + rid] = val
+    }
+
+    pub fn load_from_mecab_matrix(f: &fs::File) -> Result<Matrix, MatrixLoadErr> {
+        let mut reader = io::BufReader::new(f);
+        let mut buf = String::new();
+        let mut line_cnt = 1;
+        if let Ok(_) = reader.read_line(&mut buf) {
+            let elms: Vec<&str> = buf.split(' ').collect();
+            let size: usize = match elms[0].parse() {
+                Ok(size) => size,
+                Err(_) => { return Err(MatrixLoadErr::ParseErr(1)) },
+            };
+            let mut matrix = Matrix::new(size);
+            loop {
+                line_cnt += 1;
+                if let Ok(len) = reader.read_line(&mut buf){
+                    if len == 0 {
+                        break
+                    }
+                    let elms: Vec<&str> = buf.split(' ').collect();
+                    let lid: usize = match elms[0].parse() {
+                        Ok(num) => num,
+                        Err(_) => { return Err(MatrixLoadErr::ParseErr(line_cnt)) },
+                    };
+                    let rid: usize = match elms[1].parse() {
+                        Ok(num) => num,
+                        Err(_) => { return Err(MatrixLoadErr::ParseErr(line_cnt)) },
+                    };
+                    let cost: i64 = match elms[2].parse() {
+                        Ok(num) => num,
+                        Err(_) => { return Err(MatrixLoadErr::ParseErr(line_cnt)) },
+                    };
+                    matrix.write(lid, rid, cost);
+                    buf.clear();
+                }
+            }
+            Ok(matrix)
+        }
+        else {
+            Err(MatrixLoadErr::FileReadErr)
+        }
     }
 }
 
@@ -715,32 +762,7 @@ mod test_matrix {
     }
 }
 
-pub fn build_matrix(f: &fs::File) -> Option<Matrix> {
-    let mut reader = io::BufReader::new(f);
-    let mut buf = String::new();
-    if let Ok(_) = reader.read_line(&mut buf) {
-        let elms: Vec<&str> = buf.split(' ').collect();
-        let size: usize = elms[0].parse().unwrap();
-        let mut matrix = Matrix::new(size);
-        loop {
-            if let Ok(len) = reader.read_line(&mut buf){
-                if len == 0 {
-                    break
-                }
-                let elms: Vec<&str> = buf.split(' ').collect();
-                let lid: usize = elms[0].parse().unwrap();
-                let rid: usize = elms[1].parse().unwrap();
-                let cost: i64 = elms[2].parse().unwrap();
-                matrix.write(lid, rid, cost);
-                buf.clear();
-            }
-        }
-        Some(matrix)
-    }
-    else {
-        None
-    }
-}
+
 
 use std::i64;
 
