@@ -16,7 +16,7 @@ fn main() {
         if buf.len() == 0 {
             break
         }
-        let (cost, path) = bot::morph::fill_dp(buf.as_bytes(), &trie, &matrix);
+        let (cost, path) = bot::morph::fill_dp(buf.trim().as_bytes(), &trie, &matrix);
         println!("cost {}", cost);
         for (info, begin, end) in path {
             println!("  {} --- {:?}", str::from_utf8(buf.as_bytes().get(begin..end).unwrap()).unwrap(), info);

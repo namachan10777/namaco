@@ -594,15 +594,15 @@ impl Trie {
                     return Err(DictLoadErr::ParseError(line_cnt))
                 }
                 let key = elms[0].as_bytes();
-                let id: i16 = elms[2].parse().unwrap_or(-1);
-                let cost: i64 = match elms[3].parse() {
+                let id: i16 = elms[2].trim().parse().unwrap_or(-1);
+                let cost: i64 = match elms[3].trim().parse() {
                     Ok(cost) => cost,
                     Err(_) => { return Err(DictLoadErr::ParseError(line_cnt)) }
                 };
-                let class = elms[4].to_string();
-                let subclass = elms[5].to_string();
-                let desc = elms[6].to_string();
-                let subdesc = elms[7].to_string();
+                let class = elms[4].trim().to_string();
+                let subclass = elms[5].trim().to_string();
+                let desc = elms[6].trim().to_string();
+                let subdesc = elms[7].trim().to_string();
                 let info = WordInfo {
                     id: id,
                     cost: cost,
@@ -678,6 +678,7 @@ impl Matrix {
                 Ok(size) => size,
                 Err(_) => { return Err(MatrixLoadErr::ParseErr(1)) },
             };
+            buf.clear();
             let mut matrix = Matrix::new(size);
             loop {
                 line_cnt += 1;
@@ -686,15 +687,15 @@ impl Matrix {
                         break
                     }
                     let elms: Vec<&str> = buf.split(' ').collect();
-                    let lid: usize = match elms[0].parse() {
+                    let lid: usize = match elms[0].trim().parse() {
                         Ok(num) => num,
                         Err(_) => { return Err(MatrixLoadErr::ParseErr(line_cnt)) },
                     };
-                    let rid: usize = match elms[1].parse() {
+                    let rid: usize = match elms[1].trim().parse() {
                         Ok(num) => num,
                         Err(_) => { return Err(MatrixLoadErr::ParseErr(line_cnt)) },
                     };
-                    let cost: i64 = match elms[2].parse() {
+                    let cost: i64 = match elms[2].trim().parse() {
                         Ok(num) => num,
                         Err(_) => { return Err(MatrixLoadErr::ParseErr(line_cnt)) },
                     };
