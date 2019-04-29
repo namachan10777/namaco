@@ -3,6 +3,7 @@
 @require: gr
 @require: itemize
 @require: vdecoset
+@require: tabular
 
 
 Steamer.document(|
@@ -81,7 +82,7 @@ Steamer.document(|
         ${\to}実装できるのでは?
       }
     >
-    +frame ?:({形態素解析器の基本的なアルゴリズム})<
+    +frame-nc ?:({形態素解析器の基本的なアルゴリズム})<
       +listing{
         * 辞書を引きながら候補(Latice)を列挙する
         * 生起コスト(単語の出現しやすさ)と連接コスト(単語の繋がりやすさ)を考慮して最短経路を求める
@@ -91,6 +92,113 @@ Steamer.document(|
     +frame-nc ?:({形態素解析器の基本的なアルゴリズム})<
       +p-center {
         \insert-pdf(10cm)(`./fig/latice.pdf`)(1);
+      }
+    >
+    +frame-nc ?:({形態素解析器の基本的なアルゴリズム})<
+      +p-center {
+        \insert-pdf(10cm)(`./fig/latice-highlight.pdf`)(1);
+      }
+    >
+    +frame-nc ?:({Trie木})<
+      +p-center {
+        \insert-pdf(5cm)(`./fig/trie.pdf`)(1);
+      }
+    >
+    +frame-nc ?:({Trie木})<
+      +listing {
+        * キーの長さを${k}、データの数を${n}とする
+        * 時間計算量は理想的には${\mathrm{O}\(k\)}
+        * \emph{木構造ではなく二次元配列で実装}
+          ** ヒープを使った単純な木の実装では非常に低速
+      }
+    >
+    +frame-nc ?:({Trie木})<
+      +p-center {
+        \insert-pdf(5cm)(`./fig/trie-with-id.pdf`)(1);
+      }
+    >
+    +frame-nc ?:({遷移表})<
+      +listing {
+        * 状態に一意なIDを振る
+        * 状態と入力をキーにする遷移先を書き込んだ表を考える
+        * 表を使い状態と入力から${\mathrm{O} \(1\)}で遷移すれば高速
+        * 幸い文字コードは整数値で表現できる
+      }
+    >
+    +frame-nc ?:({遷移表})<
+      +p-center{
+        \tabular(fun ce multif empty -> [
+          [ce {状態}; multif 1 8 {入力}; empty; empty; empty; empty; empty; empty];
+          [empty; ce{f}; ce{i}; ce{s}; ce{h}; ce{l}; ce{m}; ce{k}; ce{n}; ce{o}; ce{w};];
+          [ce{1}; empty; ce{2}; empty; empty; empty; empty; empty; empty; empty; empty];
+          [ce{2}; empty; empty; ce{3}; empty; ce{5}; empty; empty; empty; empty; empty];
+          [ce{3}; empty; empty; empty; ce{4}; empty; empty; empty; empty; empty; empty];
+          [ce{4}; empty; empty; empty; empty; empty; empty; empty; empty; empty; empty];
+          [ce{5}; empty; empty; empty; empty; ce{6}; ce{7}; empty; empty; empty; empty];
+          [ce{6}; empty; empty; empty; empty; empty; empty; empty; empty; empty; empty];
+          [ce{7}; empty; empty; empty; empty; empty; empty; empty; empty; empty; empty];
+          [ce{8}; empty; empty; empty; empty; empty; empty; ce{9}; empty; empty; empty];
+          [ce{9}; empty; empty; empty; empty; empty; empty; empty; ce{10}; empty; empty];
+          [ce{10}; empty; empty; empty; empty; empty; empty; empty; empty; ce{11}; empty];
+          [ce{11}; empty; empty; empty; empty; empty; empty; empty; empty; empty; empty];
+        ])(fun xs ys ->(
+          let bold p1 p2 = stroke 1pt Color.black (Gr.line p1 p2) in
+          let thin p1 p2 = stroke 0.5pt Color.black (Gr.line p1 p2) in
+          match (ys, List.reverse ys) with
+          | (y0 :: y1 :: y2 :: _, ylast :: _) ->
+            (match (xs, List.reverse xs) with
+            | (x0 :: x1 :: _, xlast :: _) ->
+              (bold (x0, y0) (xlast, y0))
+              :: (bold (x0, ylast) (xlast, ylast))
+              :: (bold (x0, y0) (x0, ylast))
+              :: (bold (xlast, y0) (xlast, ylast))
+              :: (thin (x1, y1) (xlast, y1))
+              :: (thin (x1, y0) (x1, ylast))
+              :: (thin (x0, y2) (xlast, y2))
+              :: []
+            )
+          ));
+      }
+    >
+    +frame-nc ?:({問題点})<
+      +listing {
+        * スッッカスカ
+        * メモリの無駄遣い(実際愚直にやると${200\ \mathrm{GB}}くらい必要)
+      }
+    >
+    +frame-nc ?:({解決策})<
+      +listing {
+        * 遷移表を圧縮する
+          ** 行ごとに少しづつずらして重ね合わせる(BASE)
+          ** 別の行と混同しないよう親の位置を覚えておく(CHECK)
+        * 圧縮は割と適当でもそこそこ詰まる
+        * 圧縮は工夫しないと追加に${\mathrm{O} \( n \)}が必要
+      }
+    >
+    +frame-nc ?:({Latice})<
+      +p-center {
+        \insert-pdf(7cm)(`./fig/darray.pdf`)(1);
+      }
+    >
+    +frame-nc ?:({Latice})<
+      +p-center {
+        \insert-pdf(10cm)(`./fig/latice.pdf`)(1);
+      }
+    >
+    +frame-nc ?:({Latice})<
+      +listing {
+        * マルコフ性より過去の形態素は考慮しなくていい
+          ** 部分和問題を解けばコストを計算できる
+          ** DPで解ける
+          ** 文章長を${n}とすると${\mathrm{O} \( n^2 \)}(本当はちょっと違う)
+      }
+    >
+
+    +frame-nc <
+      +p-center{
+        \emph{
+          ありがとうございました
+        }
       }
     >
   >
