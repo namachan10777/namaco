@@ -30,13 +30,6 @@ Steamer.document(|
     +frame-nc ?:({Twitter Bot})<
       +p-center{\insert-pdf(7cm)(`./fig/twitterbot.pdf`)(1);}
     >
-    +frame-nc ?:({マルコフ連鎖とは?})<
-      +listing {
-        * 過去と関係なく、現在の状態のみで未来への遷移が決まる
-        * 離散的な状態を取る
-      }
-      +centered-pdf(6.5cm)(`./fig/markov.pdf`)(1);
-    >
     +frame-nc ?:({文章生成の詳細})<
       +listing {
         * 形態素n個で切り出す
@@ -52,6 +45,13 @@ Steamer.document(|
       +p-center{
         \insert-pdf(8cm)(`./fig/chain.pdf`)(1);
       }
+    >
+    +frame-nc ?:({マルコフ連鎖とは?})<
+      +listing {
+        * 過去と関係なく、現在の状態のみで未来への遷移が決まる
+        * 離散的な状態を取る
+      }
+      +centered-pdf(6.5cm)(`./fig/markov.pdf`)(1);
     >
     +frame ?:({文章生成の詳細})<
       +listing {
