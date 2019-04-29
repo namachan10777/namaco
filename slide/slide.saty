@@ -35,14 +35,22 @@ Steamer.document(|
         * 過去と関係なく、現在の状態のみで未来への遷移が決まる
         * 離散的な状態を取る
       }
+      +centered-pdf(6.5cm)(`./fig/markov.pdf`)(1);
+    >
+    +frame-nc ?:({文章生成の詳細})<
+      +listing {
+        * 形態素n個で切り出す
+      }
       +p-center{
-        \insert-pdf(6.5cm)(`./fig/markov.pdf`)(1);
+        \insert-pdf(9cm)(`./fig/npair.pdf`)(1);
       }
     >
-    +frame ?:({文章生成の詳細})<
+    +frame-nc ?:({文章生成の詳細})<
       +listing {
-        * 形態素n個で切り出し(nつ組み)、それをランダムにしりとりする
-        * [赤い\; 蟹\; が], [が\; 終わら\; 無い] ${\to} 赤い蟹が終わらない
+        * しりとりをする
+      }
+      +p-center{
+        \insert-pdf(8cm)(`./fig/chain.pdf`)(1);
       }
     >
     +frame ?:({文章生成の詳細})<
@@ -73,8 +81,17 @@ Steamer.document(|
         ${\to}実装できるのでは?
       }
     >
+    +frame ?:({形態素解析器の基本的なアルゴリズム})<
+      +listing{
+        * 辞書を引きながら候補(Latice)を列挙する
+        * 生起コスト(単語の出現しやすさ)と連接コスト(単語の繋がりやすさ)を考慮して最短経路を求める
+          ** 実際はLatice構築と探索は並行して行う
+      }
+    >
     +frame-nc ?:({形態素解析器の基本的なアルゴリズム})<
-     +p-center{\insert-pdf(10cm)(`./fig/latice.pdf`)(1);}
+      +p-center {
+        \insert-pdf(10cm)(`./fig/latice.pdf`)(1);
+      }
     >
   >
 >
