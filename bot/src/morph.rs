@@ -34,19 +34,12 @@ struct Class {
     subdesc: String,
 }
 
-use std::fmt::Debug;
-use std::fmt;
-
-#[derive(Clone, PartialEq)]
+#[derive(Clone, PartialEq, Debug)]
 pub struct WordInfo {
     id: i16,
     cost: i64,
     class: Class,
-}
-impl Debug for WordInfo {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "WordInfo {{ id: {}, cost: {} }}", self.id, self.cost)
-    }
+    word: String,
 }
 
 use std::i16;
@@ -57,6 +50,7 @@ impl Default for WordInfo {
             id: i16::MAX,
             cost: i64::MAX,
             class: Class::default(),
+            word: String::new(),
         }
     }
 }
@@ -593,6 +587,7 @@ impl Trie {
                 if elms.len() < 8 {
                     return Err(DictLoadErr::ParseError(line_cnt))
                 }
+                let word = elms[0].to_string();
                 let key = elms[0].as_bytes();
                 let id: i16 = elms[2].trim().parse().unwrap_or(-1);
                 let cost: i64 = match elms[3].trim().parse() {
@@ -606,6 +601,7 @@ impl Trie {
                 let info = WordInfo {
                     id: id,
                     cost: cost,
+                    word: word,
                     class: Class {
                         class: class,
                         subclass: subclass,
