@@ -510,12 +510,12 @@ mod trie_test {
     #[test]
     fn test_add_find() {
         let empty_class = Class { class: "".to_string(), subclass: "".to_string(), desc: "".to_string(), subdesc: "".to_string() };
-        let w1 = WordInfo { id: 0, cost: 0, class: empty_class.clone() };
-        let w2 = WordInfo { id: 1, cost: 0, class: empty_class.clone() };
-        let w3 = WordInfo { id: 2, cost: 0, class: empty_class.clone() };
-        let w4 = WordInfo { id: 3, cost: 0, class: empty_class.clone() };
-        let w5 = WordInfo { id: 4, cost: 0, class: empty_class.clone() };
-        let w6 = WordInfo { id: 5, cost: 0, class: empty_class.clone() };
+        let w1 = WordInfo { word: String::new(), id: 0, cost: 0, class: empty_class.clone() };
+        let w2 = WordInfo { word: String::new(), id: 1, cost: 0, class: empty_class.clone() };
+        let w3 = WordInfo { word: String::new(), id: 2, cost: 0, class: empty_class.clone() };
+        let w4 = WordInfo { word: String::new(), id: 3, cost: 0, class: empty_class.clone() };
+        let w5 = WordInfo { word: String::new(), id: 4, cost: 0, class: empty_class.clone() };
+        let w6 = WordInfo { word: String::new(), id: 5, cost: 0, class: empty_class.clone() };
         let mut trie = Trie::new();
         trie.add(&[0], w1.clone());
         assert_eq!(trie.find(&[0]), vec![w1.clone()]);
@@ -843,10 +843,10 @@ mod test_viterbi {
     fn test_dp_initialize () {
         let mut trie = Trie::new();
         let empty_class = Class { class: "".to_string(), subclass: "".to_string(), desc: "".to_string(), subdesc: "".to_string() };
-        let a = WordInfo { id: 0, cost: 10, class: empty_class.clone() };
-        let b = WordInfo { id: 1, cost: 20, class: empty_class.clone() };
-        let ab = WordInfo { id: 2, cost: 20, class: empty_class.clone() };
-        let ba = WordInfo { id: 3, cost: 30, class: empty_class.clone() };
+        let a = WordInfo { word: String::new(), id: 0, cost: 10, class: empty_class.clone() };
+        let b = WordInfo { word: String::new(), id: 1, cost: 20, class: empty_class.clone() };
+        let ab = WordInfo { word: String::new(), id: 2, cost: 20, class: empty_class.clone() };
+        let ba = WordInfo { word: String::new(), id: 3, cost: 30, class: empty_class.clone() };
         trie.add("a".as_bytes(), a.clone());
         trie.add("b".as_bytes(), b.clone());
         trie.add("ab".as_bytes(), ab.clone());
