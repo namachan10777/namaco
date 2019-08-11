@@ -18,30 +18,26 @@ enum DecodedNode {
     Term(usize, usize),
 }
 
-const STAND1: usize = 0x8000000000000000;
-const STAND2: usize = 0x4000000000000000;
-const MASK: usize = 0x3fffffffffffffff;
+const MSB: usize = 0x8000000000000000;
+const MASK: usize = 0x7fffffffffffffff;
+const ROOT_CHECK: usize = usize::MAX;
+const NO_ITEM: usize = usize::MAX;
+const NO_CHILD: usize = usize::MAX;
 
 impl Into<DecodedNode> for Node {
     fn into(self) -> DecodedNode {
-        // 00 -> Root
-        // 01 -> Term
-        // 10 -> Sec
-        // 11 -> Sec (with data)
-        return if self.id & STAND1 == STAND1 {
-            if self.id & STAND2 == STAND2 {
-                DecodedNode::Sec(self.check, self.base, Some(self.id & MASK))
-            }
-            else {
-                DecodedNode::Sec(self.check, self.base, None)
-            }
+        if self.check == ROOT_CHECK {
+            DecodedNode::Root(self.base)
+        }
+        else if self.base == NO_CHILD {
+            DecodedNode::Term(self.check, self.id)
         }
         else {
-            if self.id & STAND2 == STAND2 {
-                DecodedNode::Term(self.check, self.id & MASK)
+            if self.id == NO_ITEM {
+                DecodedNode::Sec(self.check, self.base, None)
             }
             else {
-                DecodedNode::Root(self.base)
+                DecodedNode::Sec(self.check, self.base, Some(self.id & MASK))
             }
         }
     }
@@ -52,23 +48,23 @@ impl From<DecodedNode> for Node {
         match dnode {
             DecodedNode::Root(base) => Node {
                 base,
-                check: 0,
+                check: ROOT_CHECK,
                 id: 0,
             },
             DecodedNode::Term(check, id) => Node {
-                base: 0,
+                base: NO_CHILD,
                 check,
-                id: STAND2 | id,
+                id,
             },
             DecodedNode::Sec(check, base, None) => Node {
                 base,
                 check,
-                id: STAND1,
+                id: NO_ITEM,
             },
             DecodedNode::Sec(check, base, Some(id)) => Node {
                 base,
                 check,
-                id: STAND1 | STAND2 | id,
+                id: id,
             }
         }
     }
@@ -83,26 +79,26 @@ mod node_test {
         let root_decoded = DecodedNode::Root(129);
         let root_raw = Node {
             base: 129,
-            check: 0,
+            check: ROOT_CHECK,
             id: 0,
         };
         let term_decoded = DecodedNode::Term(2158, 87);
         let term_raw = Node {
-            base: 0,
+            base: NO_CHILD,
             check: 2158,
-            id: STAND2 | 87,
+            id: 87,
         };
         let sec_no_property_decoded = DecodedNode::Sec(52128, 59182, None);
         let sec_no_property_raw = Node {
             base: 59182,
             check: 52128,
-            id: STAND1,
+            id: NO_ITEM,
         };
         let sec_has_property_decoded = DecodedNode::Sec(711475, 365123, Some(214));
         let sec_has_property_raw = Node {
             base: 365123,
             check: 711475,
-            id: STAND1 | STAND2 | 214,
+            id: 214,
         };
         assert_eq!(Node::from(root_decoded.clone()), root_raw);
         assert_eq!(Into::<DecodedNode>::into(root_raw), root_decoded);
