@@ -125,5 +125,41 @@ struct Trie<T> {
     storage: Vec<T>,
 }
 
+const ROW_LEN: usize = 256;
+type Row<T> = [T; ROW_LEN];
+
 impl<T> Trie<T> {
+    fn new() -> Trie<T> {
+        Trie {
+            tree: Vec::new(),
+            storage: Vec::new(),
+        }
+    }
+}
+
+impl<T> Trie<T> {
+    // Ok(idx)
+    // Err((passed times, last idx))
+    fn explore(&self, way: &[u8]) -> Result<usize, (usize, usize)> {
+        let mut here = 0usize;
+        let mut octet_count = 0usize;
+        for octet in way {
+            let check = here;
+            here = self.tree[here].base + (*octet as usize);
+            if self.tree[here].check != check {
+                return Err((octet_count, check))
+            }
+            octet_count += 1;
+        }
+        Ok(here)
+    }
+}
+
+#[cfg(test)]
+mod pursue_test {
+    fn test_pursue() {
+        let trie = Trie::new();
+        let tree = Vec::new();
+        tree.resize(1024, 
+    }
 }
