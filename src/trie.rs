@@ -7,6 +7,11 @@ struct Node {
     check: usize,
     id: usize,
 }
+impl Default for Node {
+    fn default() -> Node {
+        Node::from(DecodedNode::default())
+    }
+}
 
 #[derive(Debug, PartialEq, Clone)]
 enum DecodedNode {
@@ -16,18 +21,29 @@ enum DecodedNode {
     Sec(usize, usize, Option<usize>),
     // check, base
     Term(usize, usize),
+    Blank,
+}
+impl Default for DecodedNode {
+    fn default() -> DecodedNode {
+        DecodedNode::Blank
+    }
 }
 
 const MSB: usize = 0x8000000000000000;
 const MASK: usize = 0x7fffffffffffffff;
-const ROOT_CHECK: usize = usize::MAX;
+const NO_PARENT: usize = usize::MAX;
 const NO_ITEM: usize = usize::MAX;
 const NO_CHILD: usize = usize::MAX;
 
 impl Into<DecodedNode> for Node {
     fn into(self) -> DecodedNode {
-        if self.check == ROOT_CHECK {
-            DecodedNode::Root(self.base)
+        if self.check == NO_PARENT {
+            if self.base == NO_CHILD {
+                DecodedNode::Blank
+            }
+            else {
+                DecodedNode::Root(self.base)
+            }
         }
         else if self.base == NO_CHILD {
             DecodedNode::Term(self.check, self.id)
@@ -48,7 +64,7 @@ impl From<DecodedNode> for Node {
         match dnode {
             DecodedNode::Root(base) => Node {
                 base,
-                check: ROOT_CHECK,
+                check: NO_PARENT,
                 id: 0,
             },
             DecodedNode::Term(check, id) => Node {
@@ -65,6 +81,11 @@ impl From<DecodedNode> for Node {
                 base,
                 check,
                 id: id,
+            },
+            DecodedNode::Blank => Node {
+                base: NO_CHILD,
+                check: NO_PARENT,
+                id: NO_ITEM,
             }
         }
     }
@@ -79,7 +100,7 @@ mod node_test {
         let root_decoded = DecodedNode::Root(129);
         let root_raw = Node {
             base: 129,
-            check: ROOT_CHECK,
+            check: NO_PARENT,
             id: 0,
         };
         let term_decoded = DecodedNode::Term(2158, 87);
