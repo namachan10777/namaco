@@ -13,7 +13,7 @@ impl Default for Node {
     }
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone, Copy)]
 enum DecodedNode {
     // base
     Root(usize),
@@ -171,12 +171,36 @@ impl<T> Trie<T> {
         Ok(here)
     }
 }
-
 #[cfg(test)]
-mod pursue_test {
-    fn test_pursue() {
-        let trie = Trie::new();
-        let tree = Vec::new();
-        tree.resize(1024, 
+mod test_explore { 
+    use super::*;
+    #[test]
+    fn test_explore() {
+        let mut tree = Vec::new();
+        tree.resize(1024, DecodedNode::default());
+        /* Root(0): 0 -+- 1 -> Term(0): 1
+         *             |
+         *             +- 2 -> Sec(0,4): 2 -+- 2 -> Term(2): 6
+         *                                  |
+         *                                  +- 3 -> Sec(2, 4): 7 -+- 1 -> Term(7): 5
+         */
+        tree[0] = DecodedNode::Root(0);
+        tree[1] = DecodedNode::Term(0, 0);
+        tree[2] = DecodedNode::Sec(0, 4, Some(1));
+        tree[6] = DecodedNode::Term(2, 2);
+        tree[7] = DecodedNode::Sec(2, 4, Some(3));
+        tree[5] = DecodedNode::Term(7, 4);
+        let trie = Trie {
+            tree: tree.iter().map(|elm| Node::from(*elm)).collect(),
+            storage: Vec::new() as Vec<String>,
+        };
+        assert_eq!(trie.explore(&[1]), Ok(1));
+        assert_eq!(trie.explore(&[2]), Ok(2));
+        assert_eq!(trie.explore(&[2, 2]), Ok(6));
+        assert_eq!(trie.explore(&[2, 3]), Ok(7));
+        assert_eq!(trie.explore(&[2, 3, 1]), Ok(5));
+        assert_eq!(trie.explore(&[3]), Err((0, 0)));
+        assert_eq!(trie.explore(&[2, 1, 0]), Err((1, 2)));
+        assert_eq!(trie.explore(&[2, 3, 0]), Err((2, 7)));
     }
 }
