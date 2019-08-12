@@ -1,7 +1,7 @@
 // copyright (c) 2019 Nakano Masaki <namachan10777@gmail>
 use std::usize;
 
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Clone, PartialEq, Debug, Copy)]
 struct Node {
     base: usize,
     check: usize,
@@ -270,6 +270,88 @@ mod test_search_new_base {
         trie.tree = vec![Node::from(DecodedNode::Term(0, 0)); 512];
         assert_eq!(trie.search_new_base(&mask), 512);
         assert_eq!(trie.tree.len(), 1024);
+    }
+}
+
+impl<T> Trie<T> {
+    fn paste(&mut self, base: usize, row: &[Node]) {
+        for i in 0..row.len() {
+            if Into::<DecodedNode>::into(row[i]) != DecodedNode::Blank {
+                self.tree[base ^ i] = row[i];
+                for j in 0..256 {
+                    self.tree[row[i].base ^ j].check = base ^ i;
+                }
+            }
+        }
+    }
+}
+
+enum ShiftConstraint<'a> {
+    Avoid(usize),
+    Mask(&'a [bool]),
+}
+
+impl<T> Trie<T> {
+    fn shift_base(&mut self, parent_idx: usize, new_base: usize) {
+        // TODO parentがTerm/Blankではないか確認
+        let mut buf = [Node::default(); 256];
+        for i in 0..256 {
+            let source_idx = self.tree[parent_idx].base ^ i;
+            let source = self.tree[source_idx].clone();
+            match Into::<DecodedNode>::into(source.clone()) {
+                DecodedNode::Root(_) => {},
+                DecodedNode::Blank => {},
+                DecodedNode::Term(check, _) => {
+                    if check == parent_idx {
+                        buf[i] = source.clone();
+                        self.tree[source_idx] = Node::default();
+                    }
+                },
+                DecodedNode::Sec(check, _, _) => {
+                    if check == parent_idx {
+                        buf[i] = source.clone();
+                        self.tree[source_idx] = Node::default();
+                        for j in 0..256 {
+                            if self.tree[source.base ^ j].check == source_idx {
+                                self.tree[source.base ^ j].check = new_base ^ i;
+                            }
+                        }
+                    }
+                },
+            }
+        }
+        for i in 0..256 {
+            match Into::<DecodedNode>::into(buf[i].clone()) {
+                DecodedNode::Root(_) => unreachable!(),
+                DecodedNode::Blank => {},
+                DecodedNode::Term(_, _) => {
+                    self.tree[new_base ^ i] = buf[i];
+                },
+                DecodedNode::Sec(_, _, _) => {
+                    self.tree[new_base ^ i] = buf[i];
+                },
+            }
+        }
+        self.tree[parent_idx].base = new_base;
+    }
+}
+#[cfg(test)]
+mod test_conflict_resolver {
+    use super::*;
+    #[test]
+    fn test_shift_base() {
+        let mut tree = vec![Node::default();512];
+        tree[0] = Node::from(DecodedNode::Root(0));
+        tree[1] = Node::from(DecodedNode::Sec(0, 0, None));
+        tree[2] = Node::from(DecodedNode::Term(1, 0));
+        let mut trie: Trie<String> = Trie {
+            tree,
+            storage: Vec::new(),
+        };
+        trie.shift_base(0, 5);
+        assert_eq!(trie.tree[0], Node::from(DecodedNode::Root(5)));
+        assert_eq!(trie.tree[4], Node::from(DecodedNode::Sec(0, 0, None)));
+        assert_eq!(trie.tree[2], Node::from(DecodedNode::Term(4, 0)));
     }
 }
 
