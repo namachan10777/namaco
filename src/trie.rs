@@ -147,8 +147,10 @@ type Row<T> = [T; ROW_LEN];
 
 impl<T> Trie<T> {
     fn new() -> Trie<T> {
+        let mut tree = vec![Node::default(); 256];
+        tree[0] = Node::from(DecodedNode::Root(0));
         Trie {
-            tree: Vec::new(),
+            tree,
             storage: Vec::new(),
         }
     }
