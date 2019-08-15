@@ -9,3 +9,6 @@ jobs:
       - run:
           name: test
           command: bash ./test.sh
+      - run:
+          name: coverage
+          command: bash ./coverage.sh
