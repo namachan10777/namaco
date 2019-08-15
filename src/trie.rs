@@ -316,15 +316,43 @@ impl<T> Trie<T> {
         }
         for i in 0..256 {
             // move brothers
-            self.tree[new_base ^ i] = buf[i];
-            for j in 0..256 {
-                // update children's "check".
-                let child_idx = buf[i].base ^ j;
-                if self.tree[child_idx].check == parent.base ^ i {
-                    self.tree[child_idx].check = new_base ^ i;
+            if Into::<DecodedNode>::into(buf[i]) != DecodedNode::Blank {
+                self.tree[new_base ^ i] = buf[i];
+                for j in 0..256 {
+                    // update children's "check".
+                    if buf[i].base != NO_CHILD {
+                        let child_idx = buf[i].base ^ j;
+                        if self.tree[child_idx].check == parent.base ^ i {
+                            self.tree[child_idx].check = new_base ^ i;
+                        }
+                    }
                 }
             }
         }
         self.tree[parent_idx].base = new_base;
+    }
+}
+#[cfg(test)]
+mod test_move_row {
+    use super::*;
+    #[test]
+    fn test_move_row() {
+        let mut tree = vec![Node::default(); 512];
+        tree[0] = Node::from(DecodedNode::Root(0));
+        tree[1] = Node::from(DecodedNode::Sec(0, 256, None));
+        tree[5] = Node::from(DecodedNode::Term(0, 0));
+        tree[300] = Node::from(DecodedNode::Sec(1, 256, None));
+        tree[301] = Node::from(DecodedNode::Term(300, 0));
+        let mut trie: Trie<String> = Trie {
+            tree,
+            storage: Vec::new(),
+        };
+        println!("{:?}", trie.tree[0]);
+        trie.move_row(0, 4);
+        assert_eq!(trie.tree[0], Node::from(DecodedNode::Root(4)));
+        assert_eq!(trie.tree[5], Node::from(DecodedNode::Sec(0, 256, None)));
+        assert_eq!(trie.tree[1], Node::from(DecodedNode::Term(0, 0)));
+        assert_eq!(trie.tree[300], Node::from(DecodedNode::Sec(5, 256, None)));
+        assert_eq!(trie.tree[301], Node::from(DecodedNode::Term(300, 0)));
     }
 }
