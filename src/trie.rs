@@ -143,7 +143,7 @@ struct Trie<T> {
 }
 
 const ROW_LEN: usize = 256;
-type Row<T> = [T; ROW_LEN];
+type Row = [Node; ROW_LEN];
 
 impl<T> Trie<T> {
     fn new() -> Trie<T> {
@@ -204,6 +204,36 @@ mod test_explore {
         assert_eq!(trie.explore(&[3]), Err((0, 0)));
         assert_eq!(trie.explore(&[2, 1, 0]), Err((1, 2)));
         assert_eq!(trie.explore(&[2, 3, 0]), Err((2, 7)));
+    }
+}
+
+fn row2mask(row: Row) -> [bool;256] {
+    let mut mask = [false; 256];
+    for i in 0..256 {
+        mask[i] = match Into::<DecodedNode>::into(row[i]) {
+            DecodedNode::Term(_, _) => true,
+            DecodedNode::Root(_) => true,
+            DecodedNode::Sec(_, _, _) => true,
+            DecodedNode::Blank => false,
+        }
+    }
+    mask
+}
+#[cfg(test)]
+mod test_row2mask {
+    use super::*;
+    #[test]
+    fn test_row2mask() {
+        let mut row = [Node::default(); 256];
+        row[2] = Node::from(DecodedNode::Term(0, 0));
+        row[9] = Node::from(DecodedNode::Sec(0, 0, None));
+        row[200] = Node::from(DecodedNode::Root(0));
+        row[222] = Node::from(DecodedNode::Blank);
+        let mut mask = [false; 256];
+        mask[2] = true;
+        mask[9] = true;
+        mask[200] = true;
+        assert_eq!(row2mask(row).to_vec(), mask.to_vec());
     }
 }
 
