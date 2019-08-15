@@ -1,8 +1,9 @@
 version: 2.1
+
 jobs:
   build:
     docker:
-      - image: namachan10777/egobot-test:latest
+      - image: namachan10777/namaco:latest
 
     steps:
       - checkout
