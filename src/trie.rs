@@ -264,10 +264,10 @@ impl<T> Trie<T> {
 }
 
 #[cfg(test)]
-mod test_search_new_base {
+mod test_reallocate_base {
     use super::*;
     #[test]
-    fn test_search_new_base() {
+    fn test_reallocate_base() {
         let mut mask = [false; 256];
         mask[0] = true;
         let mut tree = vec![Node::from(DecodedNode::Term(0, 0)); 512];
@@ -276,29 +276,29 @@ mod test_search_new_base {
             tree,
             storage: Vec::new(),
         };
-        assert_eq!(trie.search_new_base(&mask), 0^6);
+        assert_eq!(trie.reallocate_base(&mask), 0^6);
 
         mask[0] = false;
         mask[47] = true;
-        assert_eq!(trie.search_new_base(&mask), 6^47);
+        assert_eq!(trie.reallocate_base(&mask), 6^47);
 
         mask[47] = true;
         mask[99] = true;
         trie.tree = vec![Node::from(DecodedNode::Blank); 512];
         trie.tree[47] = Node::from(DecodedNode::Term(0, 0));
         trie.tree[1^99] = Node::from(DecodedNode::Term(0, 0));
-        assert_eq!(trie.search_new_base(&mask), 2);
+        assert_eq!(trie.reallocate_base(&mask), 2);
 
         mask[47] = false;
         mask[99] = false;
         mask[0] = true;
         trie.tree = vec![Node::from(DecodedNode::Term(0, 0)); 512];
         trie.tree[511] = Node::from(DecodedNode::default());
-        assert_eq!(trie.search_new_base(&mask), 511);
+        assert_eq!(trie.reallocate_base(&mask), 511);
         assert_eq!(trie.tree.len(), 1024);
 
         trie.tree = vec![Node::from(DecodedNode::Term(0, 0)); 512];
-        assert_eq!(trie.search_new_base(&mask), 512);
+        assert_eq!(trie.reallocate_base(&mask), 512);
         assert_eq!(trie.tree.len(), 1024);
     }
 }
