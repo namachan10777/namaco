@@ -238,7 +238,7 @@ mod test_row2mask {
 }
 
 impl<T> Trie<T> {
-    fn search_new_base(&mut self, target: &[bool]) -> usize {
+    fn reallocate_base(&mut self, target: &[bool]) -> usize {
         for i in 0..self.tree.len() - 256 {
             let mut safe = true;
             for j in 0..256 {
