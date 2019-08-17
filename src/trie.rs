@@ -372,6 +372,51 @@ mod test_read_erase_row {
 }
 
 impl<T> Trie<T> {
+    // This function forcely overrides tree
+    fn paste(&mut self, row: Row, from: usize) {
+        let to = self.reallocate_base(&row2mask(row));
+        for i in 0..256 {
+            if row[i].check != NO_PARENT {
+                self.tree[to ^ i] = row[i];
+                for j in 0..256 {
+                    if row[i].base != NO_CHILD && self.tree[row[i].base ^ j].check == from ^ i {
+                        self.tree[row[i].base ^ j].check = to ^ i;
+                    }
+                }
+            }
+        }
+    }
+}
+#[cfg(test)]
+mod test_paste {
+    use super::*;
+    #[test]
+    fn test_paste() {
+        let mut tree = vec![Node::default(); 512];
+        tree[0] = Node::from(DecodedNode::Root(0));
+        tree[64] = Node::from(DecodedNode::Term(5, 0));
+        
+        let mut row = [Node::default(); 256];
+        row[1] = Node::from(DecodedNode::Sec(0, 64, None));
+        row[2] = Node::from(DecodedNode::Term(1, 0));
+
+        let mut trie: Trie<String> = Trie {
+            tree,
+            storage: Vec::new(),
+        };
+
+        trie.paste(row, 4);
+        let mut ans = vec![Node::default(); 512];
+        ans[0] = Node::from(DecodedNode::Root(0));
+        ans[64] = Node::from(DecodedNode::Term(1, 0));
+        ans[1] = Node::from(DecodedNode::Sec(0, 64, None));
+        ans[2] = Node::from(DecodedNode::Term(1, 0));
+
+        assert_eq!(trie.tree, ans);
+    }
+}
+
+impl<T> Trie<T> {
     // This function trust destination is empty.
     fn move_row(&mut self, parent_idx: usize, new_base: usize) {
         let parent = self.tree[parent_idx];
