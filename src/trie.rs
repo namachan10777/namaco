@@ -304,6 +304,74 @@ mod test_reallocate_base {
 }
 
 impl<T> Trie<T> {
+    fn read_row(&self, parent_idx: usize) -> Row {
+        let mut buf: Row = [Node::default(); 256];
+        let base = self.tree[parent_idx].base;
+        for i in 0..256 {
+            if self.tree[base ^ i].check == parent_idx {
+                buf[i] = self.tree[base ^ i];
+            }
+        }
+        buf
+    }
+
+    fn erase_row(&mut self, parent_idx: usize) {
+        let base = self.tree[parent_idx].base;
+        for i in 0..256 {
+            if self.tree[base ^ i].check == parent_idx {
+                self.tree[base ^ i] = Node::default();
+            }
+        }
+    }
+}
+
+#[cfg(test)]
+mod test_read_erase_row {
+    use super::*;
+    #[test]
+    fn test_read () {
+        let mut tree = [Node::default(); 512].to_vec();
+        tree[0] = Node::from(DecodedNode::Root(0));
+        tree[1] = Node::from(DecodedNode::Sec(0, 64, None));
+        tree[2] = Node::from(DecodedNode::Term(0, 0));
+        tree[64] = Node::from(DecodedNode::Term(1, 0));
+        let trie: Trie<String> = Trie {
+            tree,
+            storage: Vec::new(),
+        };
+
+        let row1 = trie.read_row(0).to_vec();
+        let mut row1_ans = vec![Node::default();256];
+        row1_ans[1] = Node::from(DecodedNode::Sec(0, 64, None));
+        row1_ans[2] = Node::from(DecodedNode::Term(0, 0));
+        assert_eq!(row1, row1_ans);
+
+        let row2 = trie.read_row(1).to_vec();
+        let mut row2_ans = vec![Node::default();256];
+        row2_ans[0] = Node::from(DecodedNode::Term(1, 0));
+        assert_eq!(row2, row2_ans);
+    }
+
+    fn test_erase () {
+        let mut tree = [Node::default(); 512].to_vec();
+        tree[0] = Node::from(DecodedNode::Root(0));
+        tree[1] = Node::from(DecodedNode::Sec(0, 64, None));
+        tree[2] = Node::from(DecodedNode::Term(0, 0));
+        tree[64] = Node::from(DecodedNode::Term(1, 0));
+        let mut trie: Trie<String> = Trie {
+            tree,
+            storage: Vec::new(),
+        };
+
+        trie.erase_row(0);
+        let mut tree1 = [Node::default(); 512].to_vec();
+        tree1[0] = Node::from(DecodedNode::Root(0));
+        tree1[64] = Node::from(DecodedNode::Term(1, 0));
+        assert_eq!(trie.tree, tree1);
+    }
+}
+
+impl<T> Trie<T> {
     // This function trust destination is empty.
     fn move_row(&mut self, parent_idx: usize, new_base: usize) {
         let parent = self.tree[parent_idx];
