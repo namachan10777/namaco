@@ -9,7 +9,26 @@ struct Node {
 }
 impl Default for Node {
     fn default() -> Node {
-        Node::from(DecodedNode::default())
+        Node::from(DecodedNode::Blank)
+    }
+}
+
+impl Node {
+    fn root(base: usize) -> Self {
+        Node::from(DecodedNode::Root(base))
+    }
+    
+    fn term(check: usize, id: usize) -> Self {
+        Node::from(DecodedNode::Term(check, id))
+    }
+
+    
+    fn sec(check: usize, base: usize, id: Option<usize>) -> Self {
+        Node::from(DecodedNode::Sec(check, base, id))
+    }
+
+    fn blank() -> Self {
+        Node::default()
     }
 }
 
@@ -147,8 +166,8 @@ type Row = [Node; ROW_LEN];
 
 impl<T> Trie<T> {
     fn new() -> Trie<T> {
-        let mut tree = vec![Node::default(); 256];
-        tree[0] = Node::from(DecodedNode::Root(0));
+        let mut tree = vec![Node::blank(); 256];
+        tree[0] = Node::root(0);
         Trie {
             tree,
             storage: Vec::new(),
@@ -179,21 +198,21 @@ mod test_explore {
     #[test]
     fn test_explore() {
         let mut tree = Vec::new();
-        tree.resize(1024, DecodedNode::default());
+        tree.resize(1024, Node::blank());
         /* Root(0): 0 -+- 1 -> Term(0): 1
          *             |
          *             +- 2 -> Sec(0,4): 2 -+- 2 -> Term(2): 6
          *                                  |
          *                                  +- 3 -> Sec(2, 4): 7 -+- 1 -> Term(7): 5
          */
-        tree[0] = DecodedNode::Root(0);
-        tree[1] = DecodedNode::Term(0, 0);
-        tree[2] = DecodedNode::Sec(0, 4, Some(1));
-        tree[6] = DecodedNode::Term(2, 2);
-        tree[7] = DecodedNode::Sec(2, 4, Some(3));
-        tree[5] = DecodedNode::Term(7, 4);
+        tree[0] = Node::root(0);
+        tree[1] = Node::term(0, 0);
+        tree[2] = Node::sec(0, 4, Some(1));
+        tree[6] = Node::term(2, 2);
+        tree[7] = Node::sec(2, 4, Some(3));
+        tree[5] = Node::term(7, 4);
         let trie = Trie {
-            tree: tree.iter().map(|elm| Node::from(*elm)).collect(),
+            tree,
             storage: Vec::new() as Vec<String>,
         };
         assert_eq!(trie.explore(&[1]), Ok(1));
@@ -224,10 +243,10 @@ mod test_row2mask {
     use super::*;
     #[test]
     fn test_row2mask() {
-        let mut row = [Node::default(); 256];
-        row[2] = Node::from(DecodedNode::Term(0, 0));
-        row[9] = Node::from(DecodedNode::Sec(0, 0, None));
-        row[200] = Node::from(DecodedNode::Root(0));
+        let mut row = [Node::blank(); 256];
+        row[2] = Node::term(0, 0);
+        row[9] = Node::sec(0, 0, None);
+        row[200] = Node::root(0);
         row[222] = Node::from(DecodedNode::Blank);
         let mut mask = [false; 256];
         mask[2] = true;
@@ -249,7 +268,7 @@ impl<T> Trie<T> {
             }
         }
         let half = self.tree.len();
-        self.tree.resize(half * 2, Node::default());
+        self.tree.resize(half * 2, Node::blank());
         for i in half-1..half + 255 {
             let mut safe = true;
             for j in 0..256 {
@@ -270,8 +289,8 @@ mod test_reallocate_base {
     fn test_reallocate_base() {
         let mut mask = [false; 256];
         mask[0] = true;
-        let mut tree = vec![Node::from(DecodedNode::Term(0, 0)); 512];
-        tree[6] = Node::default();
+        let mut tree = vec![Node::term(0, 0); 512];
+        tree[6] = Node::blank();
         let mut trie: Trie<String> = Trie {
             tree,
             storage: Vec::new(),
@@ -284,20 +303,20 @@ mod test_reallocate_base {
 
         mask[47] = true;
         mask[99] = true;
-        trie.tree = vec![Node::from(DecodedNode::Blank); 512];
-        trie.tree[47] = Node::from(DecodedNode::Term(0, 0));
-        trie.tree[1^99] = Node::from(DecodedNode::Term(0, 0));
+        trie.tree = vec![Node::blank(); 512];
+        trie.tree[47] = Node::term(0, 0);
+        trie.tree[1^99] = Node::term(0, 0);
         assert_eq!(trie.reallocate_base(&mask), 2);
 
         mask[47] = false;
         mask[99] = false;
         mask[0] = true;
-        trie.tree = vec![Node::from(DecodedNode::Term(0, 0)); 512];
-        trie.tree[511] = Node::from(DecodedNode::default());
+        trie.tree = vec![Node::term(0, 0); 512];
+        trie.tree[511] = Node::blank();
         assert_eq!(trie.reallocate_base(&mask), 511);
         assert_eq!(trie.tree.len(), 1024);
 
-        trie.tree = vec![Node::from(DecodedNode::Term(0, 0)); 512];
+        trie.tree = vec![Node::term(0, 0); 512];
         assert_eq!(trie.reallocate_base(&mask), 512);
         assert_eq!(trie.tree.len(), 1024);
     }
@@ -305,7 +324,7 @@ mod test_reallocate_base {
 
 impl<T> Trie<T> {
     fn read_row(&self, parent_idx: usize) -> Row {
-        let mut buf: Row = [Node::default(); 256];
+        let mut buf: Row = [Node::blank(); 256];
         let base = self.tree[parent_idx].base;
         for i in 0..256 {
             if self.tree[base ^ i].check == parent_idx {
@@ -319,7 +338,7 @@ impl<T> Trie<T> {
         let base = self.tree[parent_idx].base;
         for i in 0..256 {
             if self.tree[base ^ i].check == parent_idx {
-                self.tree[base ^ i] = Node::default();
+                self.tree[base ^ i] = Node::blank();
             }
         }
     }
@@ -330,43 +349,43 @@ mod test_read_erase_row {
     use super::*;
     #[test]
     fn test_read () {
-        let mut tree = [Node::default(); 512].to_vec();
-        tree[0] = Node::from(DecodedNode::Root(0));
-        tree[1] = Node::from(DecodedNode::Sec(0, 64, None));
-        tree[2] = Node::from(DecodedNode::Term(0, 0));
-        tree[64] = Node::from(DecodedNode::Term(1, 0));
+        let mut tree = [Node::blank(); 512].to_vec();
+        tree[0] = Node::root(0);
+        tree[1] = Node::sec(0, 64, None);
+        tree[2] = Node::term(0, 0);
+        tree[64] = Node::term(1, 0);
         let trie: Trie<String> = Trie {
             tree,
             storage: Vec::new(),
         };
 
         let row1 = trie.read_row(0).to_vec();
-        let mut row1_ans = vec![Node::default();256];
-        row1_ans[1] = Node::from(DecodedNode::Sec(0, 64, None));
-        row1_ans[2] = Node::from(DecodedNode::Term(0, 0));
+        let mut row1_ans = vec![Node::blank();256];
+        row1_ans[1] = Node::sec(0, 64, None);
+        row1_ans[2] = Node::term(0, 0);
         assert_eq!(row1, row1_ans);
 
         let row2 = trie.read_row(1).to_vec();
-        let mut row2_ans = vec![Node::default();256];
-        row2_ans[0] = Node::from(DecodedNode::Term(1, 0));
-        assert_eq!(row2, row2_ans);
+        let mut row2_ans = vec![Node::blank();256];
+        row2_ans[0] = Node::term(1, 0);
+        assert_eq!(row2, row2_ans)
     }
 
     fn test_erase () {
-        let mut tree = [Node::default(); 512].to_vec();
-        tree[0] = Node::from(DecodedNode::Root(0));
-        tree[1] = Node::from(DecodedNode::Sec(0, 64, None));
-        tree[2] = Node::from(DecodedNode::Term(0, 0));
-        tree[64] = Node::from(DecodedNode::Term(1, 0));
+        let mut tree = [Node::blank(); 512].to_vec();
+        tree[0] = Node::root(0);
+        tree[1] = Node::sec(0, 64, None);
+        tree[2] = Node::term(0, 0);
+        tree[64] = Node::term(1, 0);
         let mut trie: Trie<String> = Trie {
             tree,
             storage: Vec::new(),
         };
 
         trie.erase_row(0);
-        let mut tree1 = [Node::default(); 512].to_vec();
-        tree1[0] = Node::from(DecodedNode::Root(0));
-        tree1[64] = Node::from(DecodedNode::Term(1, 0));
+        let mut tree1 = [Node::blank(); 512].to_vec();
+        tree1[0] = Node::root(0);
+        tree1[64] = Node::term(1, 0);
         assert_eq!(trie.tree, tree1);
     }
 }
@@ -392,13 +411,13 @@ mod test_paste {
     use super::*;
     #[test]
     fn test_paste() {
-        let mut tree = vec![Node::default(); 512];
-        tree[0] = Node::from(DecodedNode::Root(0));
-        tree[64] = Node::from(DecodedNode::Term(5, 0));
+        let mut tree = vec![Node::blank(); 512];
+        tree[0] = Node::root(0);
+        tree[64] = Node::term(5, 0);
         
-        let mut row = [Node::default(); 256];
-        row[1] = Node::from(DecodedNode::Sec(0, 64, None));
-        row[2] = Node::from(DecodedNode::Term(1, 0));
+        let mut row = [Node::blank(); 256];
+        row[1] = Node::sec(0, 64, None);
+        row[2] = Node::term(1, 0);
 
         let mut trie: Trie<String> = Trie {
             tree,
@@ -406,11 +425,11 @@ mod test_paste {
         };
 
         trie.paste(row, 4);
-        let mut ans = vec![Node::default(); 512];
-        ans[0] = Node::from(DecodedNode::Root(0));
-        ans[64] = Node::from(DecodedNode::Term(1, 0));
-        ans[1] = Node::from(DecodedNode::Sec(0, 64, None));
-        ans[2] = Node::from(DecodedNode::Term(1, 0));
+        let mut ans = vec![Node::blank(); 512];
+        ans[0] = Node::root(0);
+        ans[64] = Node::term(1, 0);
+        ans[1] = Node::sec(0, 64, None);
+        ans[2] = Node::term(1, 0);
 
         assert_eq!(trie.tree, ans);
     }
@@ -420,11 +439,11 @@ impl<T> Trie<T> {
     // This function trust destination is empty.
     fn move_row(&mut self, parent_idx: usize, new_base: usize) {
         let parent = self.tree[parent_idx];
-        let mut buf = [Node::default(); 256];
+        let mut buf = [Node::blank(); 256];
         for i in 0..256 {
             if self.tree[parent.base ^ i].check == parent_idx {
                 buf[i] = self.tree[parent.base ^ i];
-                self.tree[parent.base ^ i] = Node::default();
+                self.tree[parent.base ^ i] = Node::blank();
             }
         }
         for i in 0..256 {
@@ -450,22 +469,22 @@ mod test_move_row {
     use super::*;
     #[test]
     fn test_move_row() {
-        let mut tree = vec![Node::default(); 512];
-        tree[0] = Node::from(DecodedNode::Root(0));
-        tree[1] = Node::from(DecodedNode::Sec(0, 256, None));
-        tree[5] = Node::from(DecodedNode::Term(0, 0));
-        tree[300] = Node::from(DecodedNode::Sec(1, 256, None));
-        tree[301] = Node::from(DecodedNode::Term(300, 0));
+        let mut tree = vec![Node::blank(); 512];
+        tree[0] = Node::root(0);
+        tree[1] = Node::sec(0, 256, None);
+        tree[5] = Node::term(0, 0);
+        tree[300] = Node::sec(1, 256, None);
+        tree[301] = Node::term(300, 0);
         let mut trie: Trie<String> = Trie {
             tree,
             storage: Vec::new(),
         };
         println!("{:?}", trie.tree[0]);
         trie.move_row(0, 4);
-        assert_eq!(trie.tree[0], Node::from(DecodedNode::Root(4)));
-        assert_eq!(trie.tree[5], Node::from(DecodedNode::Sec(0, 256, None)));
-        assert_eq!(trie.tree[1], Node::from(DecodedNode::Term(0, 0)));
-        assert_eq!(trie.tree[300], Node::from(DecodedNode::Sec(5, 256, None)));
-        assert_eq!(trie.tree[301], Node::from(DecodedNode::Term(300, 0)));
+        assert_eq!(trie.tree[0], Node::root(4));
+        assert_eq!(trie.tree[5], Node::sec(0, 256, None));
+        assert_eq!(trie.tree[1], Node::term(0, 0));
+        assert_eq!(trie.tree[300], Node::sec(5, 256, None));
+        assert_eq!(trie.tree[301], Node::term(300, 0));
     }
 }
