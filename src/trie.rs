@@ -436,6 +436,51 @@ mod test_paste {
 }
 
 impl<T> Trie<T> {
+    fn push_put(&mut self, target_idx: usize) -> Result<(), ()> {
+        if self.tree[target_idx].check == NO_PARENT {
+            if self.tree[target_idx].base == NO_CHILD {
+                return Ok(())
+            }
+            else {
+                return Err(())
+            }
+        }
+        let parent_idx = self.tree[target_idx].check;
+        let row = self.read_row(parent_idx);
+        self.erase_row(parent_idx);
+        self.tree[target_idx] = Node::term(0, 0);
+        let base = self.reallocate_base(&row2mask(row));
+        self.paste(row, self.tree[parent_idx].base);
+        self.tree[parent_idx].base = base;
+        self.tree[target_idx] = Node::blank();
+        return Ok(())
+    }
+}
+#[cfg(test)]
+mod test_push_out {
+    use super::*;
+    #[test]
+    fn test_push_out () {
+        let mut tree = vec![Node::default(); 512];
+        tree[0] = Node::root(0);
+        tree[1] = Node::sec(0, 8, None);
+        tree[2] = Node::term(0, 0);
+        tree[8] = Node::term(1, 0);
+        let mut trie: Trie<String> = Trie {
+            tree,
+            storage: Vec::new(),
+        };
+        trie.push_put(1);
+        let mut ans = vec![Node::default(); 512];
+        ans[0] = Node::root(4);
+        ans[5] = Node::sec(0, 8, None);
+        ans[6] = Node::term(0, 0);
+        ans[8] = Node::term(5, 0);
+        assert_eq!(trie.tree, ans);
+    }
+}
+
+impl<T> Trie<T> {
     // This function trust destination is empty.
     fn move_row(&mut self, parent_idx: usize, new_base: usize) {
         let parent = self.tree[parent_idx];
