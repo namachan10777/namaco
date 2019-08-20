@@ -183,7 +183,7 @@ impl<T> Trie<T> {
         let mut octet_count = 0usize;
         for octet in way {
             let check = here;
-            here = self.tree[here].base + (*octet as usize);
+            here = self.tree[here].base ^ (*octet as usize);
             if self.tree[here].check != check {
                 return Err((octet_count, check))
             }
@@ -513,7 +513,6 @@ mod test_move_row {
             tree,
             storage: Vec::new(),
         };
-        println!("{:?}", trie.tree[0]);
         trie.move_row(0, 4);
         assert_eq!(trie.tree[0], Node::root(4));
         assert_eq!(trie.tree[5], Node::sec(0, 256, None));
@@ -565,5 +564,109 @@ mod test_push_out {
         ans[6] = Node::term(0, 0);
         ans[8] = Node::term(5, 0);
         assert_eq!(decode(trie.tree), decode(ans));
+    }
+}
+
+impl<T> Trie<T> {
+    fn add(&mut self, way: &[u8], cargo: T) -> Result<(), ()> {
+        let mut parent_idx = 0;
+        let mut extended = false;
+        for octet in way {
+            let child_idx = self.tree[parent_idx].base ^ (*octet as usize);
+            match Into::<DecodedNode>::into(self.tree[child_idx]) {
+                DecodedNode::Root(base) => {
+                    let mut row = self.read_row(parent_idx);
+                    let mut addition = [Node::blank(); 256];
+                    addition[*octet as usize] = Node::sec(parent_idx, 0, None);
+                    self.erase_row(parent_idx);
+                    let new_base = self.paste(row, addition, base);
+                    self.tree[parent_idx].base = new_base;
+                    parent_idx = (*octet as usize) ^ new_base;
+                    extended = true;
+                },
+                DecodedNode::Blank => {
+                    self.tree[child_idx] = Node::sec(parent_idx, 0, None);
+                    extended = true;
+                    parent_idx = child_idx;
+                },
+                DecodedNode::Term(check, id) => {
+                    if check == parent_idx {
+                        self.tree[child_idx] = Node::sec(check, 0, Some(id));
+                        extended = false;
+                        parent_idx = child_idx;
+                    }
+                    else {
+                        self.push_put(child_idx)?;
+                        self.tree[child_idx] = Node::sec(check, 0, None);
+                        extended = true;
+                        parent_idx = child_idx;
+                    }
+                },
+                DecodedNode::Sec(check, _, _) => {
+                    if check != parent_idx {
+                        self.push_put(child_idx)?;
+                        self.tree[child_idx] = Node::sec(check, 0, None);
+                        extended = true;
+                        parent_idx = child_idx;
+                    }
+                    else {
+                        extended = false;
+                        parent_idx = child_idx;
+                    }
+                },
+            }
+        }
+        let cargo_id = self.storage.len();
+        self.storage.push(cargo);
+        match Into::<DecodedNode>::into(self.tree[parent_idx]) {
+            DecodedNode::Blank => unreachable!(),
+            DecodedNode::Root(_) => {
+                unreachable!();
+            },
+            DecodedNode::Term(_, _) => unreachable!(),
+            DecodedNode::Sec(check, base, _) => {
+                if extended {
+                    self.tree[parent_idx] = Node::term(check, cargo_id);
+                }
+                else {
+                    self.tree[parent_idx] = Node::sec(check, base, Some(cargo_id));
+                }
+            }
+        }
+        Ok(())
+    }
+
+    fn find(&self, way: &[u8]) -> Result<&T, ()> {
+        match self.explore(way) {
+            Ok(idx) => {
+                match Into::<DecodedNode>::into(self.tree[idx]) {
+                    DecodedNode::Blank => Err(()),
+                    DecodedNode::Root(_) => Err(()),
+                    DecodedNode::Term(_, id) => Ok(&self.storage[id]),
+                    DecodedNode::Sec(_, _, Some(id)) => Ok(&self.storage[id]),
+                    DecodedNode::Sec(_, _, None) => Err(()),
+                }
+            },
+            Err(_) => Err(())
+        }
+    }
+}
+
+#[cfg(test)]
+mod test_add_find {
+    use super::*;
+    #[test]
+    fn test_add_fin() {
+        let mut trie: Trie<String> = Trie::new();
+        trie.add(&[1, 2, 3], "123".to_string());
+        trie.add(&[0], "0".to_string());
+        trie.add(&[1, 2], "12".to_string());
+        trie.add(&[1, 2, 0], "120".to_string());
+        trie.add(&[0, 1], "01".to_string());
+        assert_eq!(trie.find(&[0]), Ok(&"0".to_string()));
+        assert_eq!(trie.find(&[1, 2, 3]), Ok(&"123".to_string()));
+        assert_eq!(trie.find(&[1, 2]), Ok(&"12".to_string()));
+        assert_eq!(trie.find(&[1, 2, 0]), Ok(&"120".to_string()));
+        assert_eq!(trie.find(&[0, 1]), Ok(&"01".to_string()));
     }
 }
