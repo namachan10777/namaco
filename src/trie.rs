@@ -392,8 +392,16 @@ mod test_read_erase_row {
 
 impl<T> Trie<T> {
     // This function forcely overrides tree
-    fn paste(&mut self, row: Row, from: usize) {
-        let to = self.reallocate_base(&row2mask(row));
+    // 存在しなかったのにrowに入っているとfromを誤認する
+    fn paste(&mut self, row: Row, addition: Row, from: usize) -> usize {
+        let mut mask = [false; 256];
+        for i in 0..256 {
+            mask[i] = row[i].check != NO_PARENT
+                || row[i].base != NO_CHILD
+                || addition[i].check != NO_PARENT
+                || addition[i].base != NO_CHILD;
+        }
+        let to = self.reallocate_base(&mask);
         for i in 0..256 {
             if row[i].check != NO_PARENT {
                 self.tree[to ^ i] = row[i];
@@ -404,10 +412,22 @@ impl<T> Trie<T> {
                 }
             }
         }
+        for i in 0..256 {
+            if addition[i].check != NO_PARENT || addition[i].base != NO_CHILD {
+                self.tree[to ^ i] = addition[i];
+            }
+        }
+        to
     }
 }
+
+fn decode(x: Vec<Node>) -> Vec<DecodedNode> {
+    x.iter().map(|x| Into::<DecodedNode>::into(x.clone())).collect()
+}
+
 #[cfg(test)]
 mod test_paste {
+    // TODO improve test case
     use super::*;
     #[test]
     fn test_paste() {
@@ -424,7 +444,7 @@ mod test_paste {
             storage: Vec::new(),
         };
 
-        trie.paste(row, 4);
+        assert_eq!(trie.paste(row, [Node::default();256], 4), 0);
         let mut ans = vec![Node::blank(); 512];
         ans[0] = Node::root(0);
         ans[64] = Node::term(1, 0);
@@ -432,51 +452,20 @@ mod test_paste {
         ans[2] = Node::term(1, 0);
 
         assert_eq!(trie.tree, ans);
-    }
-}
 
-impl<T> Trie<T> {
-    fn push_put(&mut self, target_idx: usize) -> Result<(), ()> {
-        if self.tree[target_idx].check == NO_PARENT {
-            if self.tree[target_idx].base == NO_CHILD {
-                return Ok(())
-            }
-            else {
-                return Err(())
-            }
-        }
-        let parent_idx = self.tree[target_idx].check;
-        let row = self.read_row(parent_idx);
-        self.erase_row(parent_idx);
-        self.tree[target_idx] = Node::term(0, 0);
-        let base = self.reallocate_base(&row2mask(row));
-        self.paste(row, self.tree[parent_idx].base);
-        self.tree[parent_idx].base = base;
-        self.tree[target_idx] = Node::blank();
-        return Ok(())
-    }
-}
-#[cfg(test)]
-mod test_push_out {
-    use super::*;
-    #[test]
-    fn test_push_out () {
-        let mut tree = vec![Node::default(); 512];
-        tree[0] = Node::root(0);
-        tree[1] = Node::sec(0, 8, None);
-        tree[2] = Node::term(0, 0);
-        tree[8] = Node::term(1, 0);
-        let mut trie: Trie<String> = Trie {
-            tree,
+        let mut tree2 = vec![Node::blank(); 512];
+        tree2[0] = Node::root(0);
+        let mut trie2: Trie<String> = Trie {
+            tree: tree2,
             storage: Vec::new(),
         };
-        trie.push_put(1);
-        let mut ans = vec![Node::default(); 512];
-        ans[0] = Node::root(4);
-        ans[5] = Node::sec(0, 8, None);
-        ans[6] = Node::term(0, 0);
-        ans[8] = Node::term(5, 0);
-        assert_eq!(trie.tree, ans);
+        let mut row = [Node::blank(); 256];
+        row[0] = Node::sec(0, 0, None);
+        assert_eq!(trie2.paste([Node::blank(); 256], row, 0), 1);
+        let mut ans = vec![Node::blank(); 512];
+        ans[0] = Node::root(0);
+        ans[1] = Node::sec(0, 0, None);
+        assert_eq!(decode(trie2.tree), decode(ans));
     }
 }
 
@@ -531,5 +520,50 @@ mod test_move_row {
         assert_eq!(trie.tree[1], Node::term(0, 0));
         assert_eq!(trie.tree[300], Node::sec(5, 256, None));
         assert_eq!(trie.tree[301], Node::term(300, 0));
+    }
+}
+
+impl<T> Trie<T> {
+    fn push_put(&mut self, target_idx: usize) -> Result<(), ()> {
+        if self.tree[target_idx].check == NO_PARENT {
+            if self.tree[target_idx].base == NO_CHILD {
+                return Ok(())
+            }
+            else {
+                return Err(())
+            }
+        }
+        let parent_idx = self.tree[target_idx].check;
+        let row = self.read_row(parent_idx);
+        self.erase_row(parent_idx);
+        self.tree[target_idx] = Node::term(0, 0);
+        let base = self.reallocate_base(&row2mask(row));
+        self.paste(row, [Node::blank(); 256], self.tree[parent_idx].base);
+        self.tree[parent_idx].base = base;
+        self.tree[target_idx] = Node::blank();
+        return Ok(())
+    }
+}
+#[cfg(test)]
+mod test_push_out {
+    use super::*;
+    #[test]
+    fn test_push_out () {
+        let mut tree = vec![Node::default(); 512];
+        tree[0] = Node::root(0);
+        tree[1] = Node::sec(0, 8, None);
+        tree[2] = Node::term(0, 0);
+        tree[8] = Node::term(1, 0);
+        let mut trie: Trie<String> = Trie {
+            tree,
+            storage: Vec::new(),
+        };
+        trie.push_put(1);
+        let mut ans = vec![Node::default(); 512];
+        ans[0] = Node::root(4);
+        ans[5] = Node::sec(0, 8, None);
+        ans[6] = Node::term(0, 0);
+        ans[8] = Node::term(5, 0);
+        assert_eq!(decode(trie.tree), decode(ans));
     }
 }
