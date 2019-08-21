@@ -118,12 +118,12 @@ pub enum AdjectiveAUO_CForm {
     SubstantiveConjection,
     WrittenLangNormal,
     PredicativeGOZAIConjection,
-    Others(String),
+    Other(String),
 }
 
 pub enum AdjectiveII_CForm {
     Normal,
-    Others(String),
+    Other(String),
 }
 
 pub enum AdjectiveI_CForm {
@@ -132,12 +132,12 @@ pub enum AdjectiveI_CForm {
     SubstantiveConjection,
     WrittenLangNormal,
     PredicativeGOZAIConjection,
-    Others(String),
+    Other(String),
 }
 
 pub enum Adjective_Constant_CForm{
     Normal,
-    Others(String),
+    Other(String),
 }
 
 pub enum VerbCType {
