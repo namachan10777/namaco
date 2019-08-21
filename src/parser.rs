@@ -15,8 +15,8 @@ pub enum WordClass {
 }
 
 pub enum NounSub {
-    S_IrregularInflection,
-    NAI_AdjectiveStem,
+    SIrregularInflection,
+    NAIAdjectiveStem,
     General,
     QuoteString,
     AdjectiveStem,
@@ -25,7 +25,7 @@ pub enum NounSub {
     Conjectionwise,
     Suffix,
     Pronoun,
-    Verb_NonIndependentwise,
+    VerbNonIndependentwise,
     Special,
     NonIndependent,
     Adverbable,
@@ -78,12 +78,12 @@ pub enum AdverbSub {
 pub enum PostPositinalParticleSub {
     NominitiveParticle,
     BindingParticle,
-    Sentence_EndingParticle,
+    SentenceEndingParticle,
     ConjectionParticle,
     Special,
     Adverbize,
     AdverbialParticle,
-    Adverbial_Parallel_EndingParticle,
+    AdverbialParallelEndingParticle,
     ParallelMarker,
     Adnominalize,
     Other(String),
@@ -106,13 +106,13 @@ pub enum OtherSub {
 }
 
 pub enum AdjectiveCType {
-    AUO(AdjectiveAUO_CForm),
-    II(AdjectiveII_CForm),
-    I(AdjectiveI_CForm),
-    Constant(Adjective_Constant_CForm),
+    AUO(AdjectiveAUOCForm),
+    II(AdjectiveIICForm),
+    I(AdjectiveICForm),
+    Constant(AdjectiveConstantCForm),
 }
 
-pub enum AdjectiveAUO_CForm {
+pub enum AdjectiveAUOCForm {
     GARUConjection,
     Normal,
     SubstantiveConjection,
@@ -121,12 +121,12 @@ pub enum AdjectiveAUO_CForm {
     Other(String),
 }
 
-pub enum AdjectiveII_CForm {
+pub enum AdjectiveIICForm {
     Normal,
     Other(String),
 }
 
-pub enum AdjectiveI_CForm {
+pub enum AdjectiveICForm {
     GARUConjection,
     Normal,
     SubstantiveConjection,
@@ -135,52 +135,52 @@ pub enum AdjectiveI_CForm {
     Other(String),
 }
 
-pub enum Adjective_Constant_CForm{
+pub enum AdjectiveConstantCForm{
     Normal,
     Other(String),
 }
 
 pub enum VerbCType {
-    KA(Verb_KA_CForm),
-    SA_SURU(Verb_SA_SURU_CForm),
-    SA_ZURU(Verb_SA_ZURU_CForm),
-    RA(Verb_RA_CForm),
-    One(Verb_One_CForm),
-    One_KURERU(Verb_One_KURERU_CForm),
-    Below2_HA(Verb_Below2_HA_CForm),
-    Below2_E(Verb_Below2_E_CForm),
-    Five_KA(Verb_Five_KA_YUKU_CForm),
-    Five_BA(Verb_Five_BA_CForm),
-    Five_MA(Verb_Five_MA_CForm),
-    Five_RA(Verb_Five_RA_CForm),
-    Five_RA_Special(Verb_Five_RA_Special_CForm),
-    Five_WA(Verb_Five_WA_CForm),
+    KA(VerbKACForm),
+    SASURU(VerbSASURUCForm),
+    SAZURU(VerbSAZURUCForm),
+    RA(VerbRACForm),
+    One(VerbOneCForm),
+    OneKURERU(VerbOneKURERUCForm),
+    Below2HA(VerbBelow2HACForm),
+    Below2E(VerbBelow2ECForm),
+    FiveKA(VerbFiveKAYUKUCForm),
+    FiveBA(VerbFiveBACForm),
+    FiveMA(VerbFiveMACForm),
+    FiveRA(VerbFiveRACForm),
+    FiveRASpecial(VerbFiveRASpecialCForm),
+    FiveWA(VerbFiveWACForm),
     Other(String),
 }
 
-pub enum Verb_KA_CForm {
+pub enum VerbKACForm {
     OrderYO,
     Other(String),
 }
 
-pub enum Verb_SA_SURU_CForm {
+pub enum VerbSASURUCForm {
     ImperfectiveRERUConjection,
     Other(String),
 }
 
-pub enum Verb_SA_ZURU_CForm {
+pub enum VerbSAZURUCForm {
     Normal,
     WrittenLangNormal,
     OrderYO,
     Other(String),
 }
 
-pub enum Verb_RA_CForm {
+pub enum VerbRACForm {
     SubstantiveConjection,
     Other(String),
 }
 
-pub enum Verb_One_CForm {
+pub enum VerbOneCForm {
     Normal,
     SubstantiveConjectionSpecial,
     ImperfectiveUConjection,
@@ -188,17 +188,17 @@ pub enum Verb_One_CForm {
     Other(String),
 }
 
-pub enum Verb_One_KURERU_CForm {
+pub enum VerbOneKURERUCForm {
     ImperfectiveSpecial,
     Other(String),
 }
 
-pub enum Verb_Below2_HA_CForm {
+pub enum VerbBelow2HACForm {
     SubstantiveConjection,
     Other(String),
 }
 
-pub enum Verb_Below2_E_CForm {
+pub enum VerbBelow2ECForm {
     Normal,
     SubstantiveConjection,
     ImperfectiveUConjection,
@@ -206,65 +206,65 @@ pub enum Verb_Below2_E_CForm {
     Other(String),
 }
 
-pub enum Verb_Five_KA_YUKU_CForm {
+pub enum VerbFiveKAYUKUCForm {
     Normal,
     ImperfectiveUConjection,
     Other(String),
 }
 
-pub enum Verb_Five_BA_CForm {
+pub enum VerbFiveBACForm {
     Normal,
     ImperfectiveUConjection,
     Other(String),
 }
 
-pub enum Verb_Five_MA_CForm {
+pub enum VerbFiveMACForm {
     Normal,
     ImperfectiveUConjection,
     Other(String),
 }
 
-pub enum Verb_Five_RA_CForm {
+pub enum VerbFiveRACForm {
     SubstantiveConjectionSpecial,
     SubstantiveConjectionSpecial2,
     ImperfectiveSpecial,
     Other(String),
 }
 
-pub enum Verb_Five_RA_Special_CForm {
+pub enum VerbFiveRASpecialCForm {
     Normal,
     ImperfectiveUConjection,
     ImperfectiveSpecial,
     Other(String),
 }
 
-pub enum Verb_Five_WA_CForm {
+pub enum VerbFiveWACForm {
     Normal,
     ImperfectiveUConjection,
     Other(String),
 }
 
 pub enum AuxiliaryVerbCType {
-    Below2_TA(AuxiliaryVerb_Below2_TA_CForm),
-    Adjective_I(AuxiliaryVerb_Adjective_I_CForm),
-    Five_RA_ARU(AuxiliaryVerb_Five_RA_ARU_CForm),
-    Five_RA_Special(AuxiliaryVerb_Five_RA_Special_CForm),
-    Special_TA(AuxiliaryVerb_Special_TA_CForm),
-    Special_TAI(AuxiliaryVerb_Special_TAI_CForm),
-    Special_NU(AuxiliaryVerb_Special_NU_CForm),
-    Special_MASU(AuxiliaryVerb_Special_MASU_CForm),
-    Constant(AuxiliaryVerb_Special_Constant_CForm),
-    WrittenLang_KI(AuxiliaryVerb_WrittenLang_KI_CForm),
-    WrittenLang_BESHI(AuxiliaryVerb_WrittenLang_BESHI_CForm),
-    WrittenLang_RU(AuxiliaryVerb_WrittenLang_RU_CForm),
+    Below2TA(AuxiliaryVerbBelow2TACForm),
+    AdjectiveI(AuxiliaryVerbAdjectiveICForm),
+    FiveRAARU(AuxiliaryVerbFiveRAARUCForm),
+    FiveRASpecial(AuxiliaryVerbFiveRASpecialCForm),
+    SpecialTA(AuxiliaryVerbSpecialTACForm),
+    SpecialTAI(AuxiliaryVerbSpecialTAICForm),
+    SpecialNU(AuxiliaryVerbSpecialNUCForm),
+    SpecialMASU(AuxiliaryVerbSpecialMASUCForm),
+    Constant(AuxiliaryVerbSpecialConstantCForm),
+    WrittenLangKI(AuxiliaryVerbWrittenLangKICForm),
+    WrittenLangBESHI(AuxiliaryVerbWrittenLangBESHICForm),
+    WrittenLangRU(AuxiliaryVerbWrittenLangRUCForm),
 }
 
-pub enum AuxiliaryVerb_Below2_TA_CForm {
+pub enum AuxiliaryVerbBelow2TACForm {
     OrderYO,
     Other(String),
 }
 
-pub enum AuxiliaryVerb_Adjective_I_CForm {
+pub enum AuxiliaryVerbAdjectiveICForm {
     GARUConjection,
     Normal,
     SubstantiveConjection,
@@ -273,71 +273,72 @@ pub enum AuxiliaryVerb_Adjective_I_CForm {
     Other(String),
 }
 
-pub enum AuxiliaryVerb_Five_RA_ARU_CForm {
+pub enum AuxiliaryVerbFiveRAARUCForm {
     Normal,
     SubstantiveConjectionSpecial,
     ImperfectiveUConjection,
     Other(String),
 }
 
-pub enum AuxiliaryVerb_Five_RA_Special_CForm {
+pub enum AuxiliaryVerbFiveRASpecialCForm {
     Normal,
     ImperfectiveUConjection,
     ImperfectiveSpecial,
     Other(String),
 }
 
-pub enum AuxiliaryVerb_Special_TA_CForm {
+pub enum AuxiliaryVerbSpecialTACForm {
     Normal,
     Other(String),
 }
 
-pub enum AuxiliaryVerb_Special_TAI_CForm {
+pub enum AuxiliaryVerbSpecialTAICForm {
     GARUConjection,
     Normal,
     PredicativeGOZAIConjection,
     Other(String),
 }
 
-pub enum AuxiliaryVerb_Special_NU_CForm {
+pub enum AuxiliaryVerbSpecialNUCForm {
     SubstantiveConjection,
     WrittenLangNormal,
     Other(String),
 }
 
-pub enum AuxiliaryVerb_Special_MASU_CForm {
+pub enum AuxiliaryVerbSpecialMASUCForm {
     Normal,
     ImperfectiveUConjection,
     Other(String),
 }
 
-pub enum AuxiliaryVerb_Special_Constant_CForm {
+pub enum AuxiliaryVerbSpecialConstantCForm {
     Normal,
     Other(String),
 }
 
-pub enum AuxiliaryVerb_WrittenLang_KI_CForm {
+pub enum AuxiliaryVerbWrittenLangKICForm {
     SubstantiveConjection,
     Other(String),
 }
 
-pub enum AuxiliaryVerb_WrittenLang_BESHI_CForm {
+pub enum AuxiliaryVerbWrittenLangBESHICForm {
     Normal,
     SubstantiveConjection,
     Other(String),
 }
 
-pub enum AuxiliaryVerb_WrittenLang_RU_CForm {
+pub enum AuxiliaryVerbWrittenLangRUCForm {
     OrderYO,
     Other(String),
 }
 
+#[allow(dead_code)]
 pub struct Word {
     class: WordClass,
     original: String,
     reading: String,
     speaking: String,
 
-    gen_cost: usize,
+    gencost: usize,
     matrix_id: usize,
 }

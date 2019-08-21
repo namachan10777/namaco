@@ -14,6 +14,7 @@ impl Default for Node {
 }
 
 impl Node {
+    #[allow(dead_code)]
     fn root(base: usize) -> Self {
         Node::from(DecodedNode::Root(base))
     }
@@ -48,7 +49,6 @@ impl Default for DecodedNode {
     }
 }
 
-const MSB: usize = 0x8000000000000000;
 const MASK: usize = 0x7fffffffffffffff;
 const NO_PARENT: usize = usize::MAX;
 const NO_ITEM: usize = usize::MAX;
@@ -165,7 +165,8 @@ const ROW_LEN: usize = 256;
 type Row = [Node; ROW_LEN];
 
 impl<T> Trie<T> {
-    fn new() -> Trie<T> {
+    #[allow(dead_code)]
+    pub fn new() -> Trie<T> {
         let mut tree = vec![Node::blank(); 256];
         tree[0] = Node::root(0);
         Trie {
@@ -371,6 +372,7 @@ mod test_read_erase_row {
         assert_eq!(row2, row2_ans)
     }
 
+    #[test]
     fn test_erase () {
         let mut tree = [Node::blank(); 512].to_vec();
         tree[0] = Node::root(0);
@@ -421,6 +423,7 @@ impl<T> Trie<T> {
     }
 }
 
+#[allow(dead_code)]
 fn decode(x: Vec<Node>) -> Vec<DecodedNode> {
     x.iter().map(|x| Into::<DecodedNode>::into(x.clone())).collect()
 }
@@ -470,59 +473,6 @@ mod test_paste {
 }
 
 impl<T> Trie<T> {
-    // This function trust destination is empty.
-    fn move_row(&mut self, parent_idx: usize, new_base: usize) {
-        let parent = self.tree[parent_idx];
-        let mut buf = [Node::blank(); 256];
-        for i in 0..256 {
-            if self.tree[parent.base ^ i].check == parent_idx {
-                buf[i] = self.tree[parent.base ^ i];
-                self.tree[parent.base ^ i] = Node::blank();
-            }
-        }
-        for i in 0..256 {
-            // move brothers
-            if Into::<DecodedNode>::into(buf[i]) != DecodedNode::Blank {
-                self.tree[new_base ^ i] = buf[i];
-                for j in 0..256 {
-                    // update children's "check".
-                    if buf[i].base != NO_CHILD {
-                        let child_idx = buf[i].base ^ j;
-                        if self.tree[child_idx].check == parent.base ^ i {
-                            self.tree[child_idx].check = new_base ^ i;
-                        }
-                    }
-                }
-            }
-        }
-        self.tree[parent_idx].base = new_base;
-    }
-}
-#[cfg(test)]
-mod test_move_row {
-    use super::*;
-    #[test]
-    fn test_move_row() {
-        let mut tree = vec![Node::blank(); 512];
-        tree[0] = Node::root(0);
-        tree[1] = Node::sec(0, 256, None);
-        tree[5] = Node::term(0, 0);
-        tree[300] = Node::sec(1, 256, None);
-        tree[301] = Node::term(300, 0);
-        let mut trie: Trie<String> = Trie {
-            tree,
-            storage: Vec::new(),
-        };
-        trie.move_row(0, 4);
-        assert_eq!(trie.tree[0], Node::root(4));
-        assert_eq!(trie.tree[5], Node::sec(0, 256, None));
-        assert_eq!(trie.tree[1], Node::term(0, 0));
-        assert_eq!(trie.tree[300], Node::sec(5, 256, None));
-        assert_eq!(trie.tree[301], Node::term(300, 0));
-    }
-}
-
-impl<T> Trie<T> {
     fn push_put(&mut self, target_idx: usize) -> Result<(), ()> {
         if self.tree[target_idx].check == NO_PARENT {
             if self.tree[target_idx].base == NO_CHILD {
@@ -557,7 +507,7 @@ mod test_push_out {
             tree,
             storage: Vec::new(),
         };
-        trie.push_put(1);
+        trie.push_put(1).unwrap();
         let mut ans = vec![Node::default(); 512];
         ans[0] = Node::root(4);
         ans[5] = Node::sec(0, 8, None);
@@ -568,14 +518,15 @@ mod test_push_out {
 }
 
 impl<T> Trie<T> {
-    fn add(&mut self, way: &[u8], cargo: T) -> Result<(), ()> {
+    #[allow(dead_code)]
+    pub fn add(&mut self, way: &[u8], cargo: T) -> Result<(), ()> {
         let mut parent_idx = 0;
         let mut extended = false;
         for octet in way {
             let child_idx = self.tree[parent_idx].base ^ (*octet as usize);
             match Into::<DecodedNode>::into(self.tree[child_idx]) {
                 DecodedNode::Root(base) => {
-                    let mut row = self.read_row(parent_idx);
+                    let row = self.read_row(parent_idx);
                     let mut addition = [Node::blank(); 256];
                     addition[*octet as usize] = Node::sec(parent_idx, 0, None);
                     self.erase_row(parent_idx);
@@ -636,7 +587,8 @@ impl<T> Trie<T> {
         Ok(())
     }
 
-    fn find(&self, way: &[u8]) -> Result<&T, ()> {
+    #[allow(dead_code)]
+    pub fn find(&self, way: &[u8]) -> Result<&T, ()> {
         match self.explore(way) {
             Ok(idx) => {
                 match Into::<DecodedNode>::into(self.tree[idx]) {
@@ -658,11 +610,11 @@ mod test_add_find {
     #[test]
     fn test_add_fin() {
         let mut trie: Trie<String> = Trie::new();
-        trie.add(&[1, 2, 3], "123".to_string());
-        trie.add(&[0], "0".to_string());
-        trie.add(&[1, 2], "12".to_string());
-        trie.add(&[1, 2, 0], "120".to_string());
-        trie.add(&[0, 1], "01".to_string());
+        trie.add(&[1, 2, 3], "123".to_string()).unwrap();
+        trie.add(&[0], "0".to_string()).unwrap();
+        trie.add(&[1, 2], "12".to_string()).unwrap();
+        trie.add(&[1, 2, 0], "120".to_string()).unwrap();
+        trie.add(&[0, 1], "01".to_string()).unwrap();
         assert_eq!(trie.find(&[0]), Ok(&"0".to_string()));
         assert_eq!(trie.find(&[1, 2, 3]), Ok(&"123".to_string()));
         assert_eq!(trie.find(&[1, 2]), Ok(&"12".to_string()));
