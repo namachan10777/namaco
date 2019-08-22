@@ -14,4 +14,4 @@ jobs:
           name: callgrind
           command: bash ./profile.sh
       - store_artifacts:
-          path: ./callgrind.out.*
+          path: ./callgrind.out
