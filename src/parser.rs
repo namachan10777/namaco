@@ -413,7 +413,8 @@ pub fn parse_naist_jdic_by_line(line: &str) -> Word {
                     "一般" => AreaSub::General,
                     "国" => AreaSub::Nation,
                     other => AreaSub::Other(other.to_string()),
-                })
+                }),
+                other => ProperNounSub::Other(other.to_string())
             }),
             "数" => NounSub::Number,
             "接続詞的" => NounSub::Conjectionwise,
