@@ -10,3 +10,8 @@ jobs:
       - run:
           name: test
           command: bash ./test.sh
+      - run:
+          name: callgrind
+          command: bash ./profile.sh
+      - store_artifacts:
+          path: ./callgrind.out.*
