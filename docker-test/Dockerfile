@@ -2,7 +2,7 @@ FROM rust
 
 RUN apt-get update && \
 	apt-get upgrade -y && \
-	apt-get install -y cmake curl g++ jq python binutils-dev libcurl4-openssl-dev zlib1g-dev libdw-dev libiberty-dev
+	apt-get install -y cmake curl g++ jq python binutils-dev libcurl4-openssl-dev zlib1g-dev libdw-dev libiberty-dev valgrind
 
 ENV KCOV_VERSION 33
 RUN wget https://github.com/SimonKagstrom/kcov/archive/v$KCOV_VERSION.tar.gz && \
