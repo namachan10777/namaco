@@ -22,6 +22,9 @@ addons:
       - binutils-dev
       - libiberty-dev
 
+env:
+  - RUSTFLAGS="-C link-dead-code"
+
 after_success: |
   wget https://github.com/SimonKagstrom/kcov/archive/master.tar.gz &&
   tar xzf master.tar.gz &&
