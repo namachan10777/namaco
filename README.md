@@ -9,5 +9,11 @@ A morph analyzer written by Rust.
 # Require
 NAIST Jpanese Dictionary for MeCab.
 
+# CI
+## CircleCI
+for test and callgrind
+## TravisCI
+for coverage
+
 # LICENSE
 [BSL-1.0](https://opensource.org/licenses/BSL-1.0)
