@@ -592,6 +592,13 @@ pub fn parse_naist_jdic_by_line(cfg: DictCfg, line: &str) -> Word {
             }),
             other => AdjectiveCType::Other(other.to_string()),
         }),
+        "副詞" => WordClass::Adverb(match arr[cfg.wordsubclass] {
+            "一般" => AdverbSub::General,
+            "助詞類接続" => AdverbSub::PostPositinalParticlesConjection,
+            other => AdverbSub::Other(other.to_string()),
+        }),
+        "連体詞" => WordClass::AdnominalAdjective,
+        "接続詞" => WordClass::Conjection,
         _ => WordClass::Other(OtherSub::Other(String::new())),
     };
     Word {
