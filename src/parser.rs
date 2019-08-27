@@ -409,17 +409,9 @@ pub struct Word {
     matrix_id: usize,
 }
 
-#[allow(dead_code)]
-pub fn parse_naist_jdic_by_line(cfg: DictCfg, line: &str) -> Word {
-    let arr: Vec<&str> = line.split(',').collect();
-    let matrix_id: usize = arr[cfg.matrixid].parse().unwrap();
-    let matrix_id2: usize = arr[cfg.matrixid].parse().unwrap();
-    // DEBUG
-    if matrix_id != matrix_id2 {
-        println!("{:?}", line);
-    }
-    let gencost: i64 = arr[cfg.gencost].parse().unwrap();
-    let class: WordClass = match arr[cfg.wordclass] {
+
+pub fn classify(cfg: &DictCfg, arr: &Vec<&str>) -> WordClass {
+    match arr[cfg.wordclass] {
         "名詞" => WordClass::Noun(match arr[cfg.wordsubclass] {
             "サ変接続" => NounSub::SIrregularInflection,
             "ナイ形容詞語幹" => NounSub::NAIAdjectiveStem,
@@ -707,14 +699,27 @@ pub fn parse_naist_jdic_by_line(cfg: DictCfg, line: &str) -> Word {
             other => OthersSub::Other(other.to_string()),
         }),
         other => WordClass::Other(other.to_string()),
-    };
+    }
+}
+
+#[allow(dead_code)]
+pub fn parse_naist_jdic_by_line(cfg: DictCfg, line: &str) -> Word {
+    let arr: Vec<&str> = line.split(',').collect();
+    let matrix_id: usize = arr[cfg.matrixid].parse().unwrap();
+    let matrix_id2: usize = arr[cfg.matrixid].parse().unwrap();
+    // DEBUG
+    if matrix_id != matrix_id2 {
+        println!("{:?}", line);
+    }
+    let gencost: i64 = arr[cfg.gencost].parse().unwrap();
+    let class: WordClass = classify(&cfg, &arr);
     Word {
         class,
 
-        word: arr[0].to_string(),
-        original: arr[10].to_string(),
-        reading: arr[11].to_string(),
-        speaking: arr[12].to_string(),
+        word: arr[cfg.surface].to_string(),
+        original: arr[cfg.original].to_string(),
+        reading: arr[cfg.reading].to_string(),
+        speaking: arr[cfg.speaking].to_string(),
 
         gencost,
         matrix_id,
