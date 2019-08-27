@@ -152,29 +152,29 @@ pub enum AdjectiveCType {
 
 pub enum AdjectiveAUOCForm {
     GARUConjection,
-    Normal,
+    Basic,
     SubstantiveConjection,
-    WrittenLangNormal,
+    WrittenLangBasic,
     PredicativeGOZAIConjection,
     Other(String),
 }
 
 pub enum AdjectiveIICForm {
-    Normal,
+    Basic,
     Other(String),
 }
 
 pub enum AdjectiveICForm {
     GARUConjection,
-    Normal,
+    Basic,
     SubstantiveConjection,
-    WrittenLangNormal,
+    WrittenLangBasic,
     PredicativeGOZAIConjection,
     Other(String),
 }
 
 pub enum AdjectiveConstantCForm{
-    Normal,
+    Basic,
     Other(String),
 }
 
@@ -207,8 +207,8 @@ pub enum VerbSASURUCForm {
 }
 
 pub enum VerbSAZURUCForm {
-    Normal,
-    WrittenLangNormal,
+    Basic,
+    WrittenLangBasic,
     OrderYO,
     Other(String),
 }
@@ -219,7 +219,7 @@ pub enum VerbRACForm {
 }
 
 pub enum VerbOneCForm {
-    Normal,
+    Basic,
     SubstantiveConjectionSpecial,
     ImperfectiveUConjection,
     OrderYO,
@@ -237,7 +237,7 @@ pub enum VerbBelow2HACForm {
 }
 
 pub enum VerbBelow2ECForm {
-    Normal,
+    Basic,
     SubstantiveConjection,
     ImperfectiveUConjection,
     OrderYO,
@@ -245,19 +245,19 @@ pub enum VerbBelow2ECForm {
 }
 
 pub enum VerbFiveKAYUKUCForm {
-    Normal,
+    Basic,
     ImperfectiveUConjection,
     Other(String),
 }
 
 pub enum VerbFiveBACForm {
-    Normal,
+    Basic,
     ImperfectiveUConjection,
     Other(String),
 }
 
 pub enum VerbFiveMACForm {
-    Normal,
+    Basic,
     ImperfectiveUConjection,
     Other(String),
 }
@@ -270,14 +270,14 @@ pub enum VerbFiveRACForm {
 }
 
 pub enum VerbFiveRASpecialCForm {
-    Normal,
+    Basic,
     ImperfectiveUConjection,
     ImperfectiveSpecial,
     Other(String),
 }
 
 pub enum VerbFiveWACForm {
-    Normal,
+    Basic,
     ImperfectiveUConjection,
     Other(String),
 }
@@ -304,53 +304,53 @@ pub enum AuxiliaryVerbBelow2TACForm {
 
 pub enum AuxiliaryVerbAdjectiveICForm {
     GARUConjection,
-    Normal,
+    Basic,
     SubstantiveConjection,
-    WrittenLangNormal,
+    WrittenLangBasic,
     PredicativeGOZAIConjection,
     Other(String),
 }
 
 pub enum AuxiliaryVerbFiveRAARUCForm {
-    Normal,
+    Basic,
     SubstantiveConjectionSpecial,
     ImperfectiveUConjection,
     Other(String),
 }
 
 pub enum AuxiliaryVerbFiveRASpecialCForm {
-    Normal,
+    Basic,
     ImperfectiveUConjection,
     ImperfectiveSpecial,
     Other(String),
 }
 
 pub enum AuxiliaryVerbSpecialTACForm {
-    Normal,
+    Basic,
     Other(String),
 }
 
 pub enum AuxiliaryVerbSpecialTAICForm {
     GARUConjection,
-    Normal,
+    Basic,
     PredicativeGOZAIConjection,
     Other(String),
 }
 
 pub enum AuxiliaryVerbSpecialNUCForm {
     SubstantiveConjection,
-    WrittenLangNormal,
+    WrittenLangBasic,
     Other(String),
 }
 
 pub enum AuxiliaryVerbSpecialMASUCForm {
-    Normal,
+    Basic,
     ImperfectiveUConjection,
     Other(String),
 }
 
 pub enum AuxiliaryVerbSpecialConstantCForm {
-    Normal,
+    Basic,
     Other(String),
 }
 
@@ -360,7 +360,7 @@ pub enum AuxiliaryVerbWrittenLangKICForm {
 }
 
 pub enum AuxiliaryVerbWrittenLangBESHICForm {
-    Normal,
+    Basic,
     SubstantiveConjection,
     Other(String),
 }
@@ -392,24 +392,24 @@ pub fn parse_naist_jdic_by_line(line: &str) -> Word {
     if matrix_id != matrix_id2 {
         println!("{:?}", line);
     }
-    let gencost: i64 = arr[3].parse().unwrap();
-    let class: WordClass = match arr[4] {
-        "名詞" => WordClass::Noun(match arr[5] {
+    let gencost: i64 = arr[4].parse().unwrap();
+    let class: WordClass = match arr[5] {
+        "名詞" => WordClass::Noun(match arr[6] {
             "サ変接続" => NounSub::SIrregularInflection,
             "ナイ形容詞語幹" => NounSub::NAIAdjectiveStem,
             "一般" => NounSub::General,
             "引用文字列" => NounSub::QuoteString,
             "形容動詞語幹" => NounSub::AdjectiveStem,
-            "固有名詞" => NounSub::ProperNoun(match arr[5] {
+            "固有名詞" => NounSub::ProperNoun(match arr[6] {
                 "一般" => ProperNounSub::General,
-                "人名" => ProperNounSub::Name(match arr[6] {
+                "人名" => ProperNounSub::Name(match arr[7] {
                     "一般" => NameSub::General,
                     "姓" => NameSub::Surname,
                     "名" => NameSub::Givenname,
                     other => NameSub::Other(other.to_string()),
                 }),
                 "組織" => ProperNounSub::Organization,
-                "地域" => ProperNounSub::Area(match arr[6] {
+                "地域" => ProperNounSub::Area(match arr[7] {
                     "一般" => AreaSub::General,
                     "国" => AreaSub::Nation,
                     other => AreaSub::Other(other.to_string()),
@@ -418,7 +418,7 @@ pub fn parse_naist_jdic_by_line(line: &str) -> Word {
             }),
             "数" => NounSub::Number,
             "接続詞的" => NounSub::Conjectionwise,
-            "接尾" => NounSub::Suffix(match arr[5] {
+            "接尾" => NounSub::Suffix(match arr[6] {
                 "サ変接続" => SuffixSub::SIrregularInflection,
                 "一般" => SuffixSub::General,
                 "形容動詞語幹" => SuffixSub::AdjectiveStem,
@@ -430,17 +430,17 @@ pub fn parse_naist_jdic_by_line(line: &str) -> Word {
                 "副詞可能" => SuffixSub::Adverbable,
                 other => SuffixSub::Other(other.to_string()),
             }),
-            "代名詞" => NounSub::Pronoun(match arr[5] {
+            "代名詞" => NounSub::Pronoun(match arr[6] {
                 "一般" => PronounSub::General,
                 "縮約" => PronounSub::Contraction,
                 other => PronounSub::Other(other.to_string()),
             }),
             "動詞非自立的" => NounSub::VerbNonIndependentwise,
-            "特殊" => NounSub::Special(match arr[5] {
+            "特殊" => NounSub::Special(match arr[6] {
                 "助動詞語幹" => SpecialSub::AuxiliaryVerbStem,
                 other => SpecialSub::Other(other.to_string()),
             }),
-            "非自立" => NounSub::NonIndependent(match arr[5] {
+            "非自立" => NounSub::NonIndependent(match arr[6] {
                 "一般" => NonIndependentSub::General,
                 "形容動詞語幹" => NonIndependentSub::AdjectiveStem,
                 "助動詞語幹" => NonIndependentSub::AuxiliaryVerbStem,
@@ -450,6 +450,98 @@ pub fn parse_naist_jdic_by_line(line: &str) -> Word {
             "副詞可能" => NounSub::Adverbable,
             other => NounSub::Other(other.to_string()),
         }),
+        "接頭詞" => WordClass::Prefix(
+            match arr[4] {
+                "形容詞接続" => PrefixSub::AdjectiveConjection,
+                "数接続" => PrefixSub::NumberConjection,
+                "動詞接続" => PrefixSub::VerbCojection,
+                "名詞接続" => PrefixSub::NounConjection,
+                other => PrefixSub::Other(other.to_string()),
+            },
+        ),
+        "動詞" => WordClass::Verb(
+            match arr[4] {
+                "自立" => VerbSub::Independent,
+                "接尾" => VerbSub::Suffix,
+                "非自立" => VerbSub::NonIndependent,
+                other => VerbSub::Other(other.to_string()),
+            },
+            match arr[8] {
+                "カ変・来ル" => VerbCType::KA(match arr[8] {
+                    "命令ｙｏ" => VerbKACForm::OrderYO,
+                    other => VerbKACForm::Other(other.to_string()),
+                }),
+                "サ変・-スル" | "サ変・スル" => VerbCType::SASURU(match arr[8] {
+                    "未然レル接続" => VerbSASURUCForm::ImperfectiveRERUConjection,
+                    other => VerbSASURUCForm::Other(other.to_string()),
+                }),
+                "サ変・-ズル"=> VerbCType::SAZURU(match arr[8] {
+                    "基本形" => VerbSAZURUCForm::Basic,
+                    "文語基本形" => VerbSAZURUCForm::WrittenLangBasic,
+                    "命令ｙｏ" => VerbSAZURUCForm::OrderYO,
+                    other => VerbSAZURUCForm::Other(other.to_string()),
+                }),
+                "ラ変" => VerbCType::RA(match arr[8] {
+                    "体現接続" => VerbRACForm::SubstantiveConjection,
+                    other => VerbRACForm::Other(other.to_string()),
+                }),
+                "一段" => VerbCType::One(match arr[8] {
+                    "基本形" => VerbOneCForm::Basic,
+                    "体言特殊接続" => VerbOneCForm::SubstantiveConjectionSpecial,
+                    "未然ウ接続" => VerbOneCForm::ImperfectiveUConjection,
+                    "命令ｙｏ" => VerbOneCForm::OrderYO,
+                    other => VerbOneCForm::Other(other.to_string()),
+                }),
+                "一段・クレル" => VerbCType::OneKURERU(match arr[8] {
+                    "未然特殊" => VerbOneKURERUCForm::ImperfectiveSpecial,
+                    other => VerbOneKURERUCForm::Other(other.to_string()),
+                }),
+                "下ニ・ハ行" => VerbCType::Below2HA(match arr[8] {
+                    "体言接続" => VerbBelow2HACForm::SubstantiveConjection,
+                    other => VerbBelow2HACForm::Other(other.to_string()),
+                }),
+                "下ニ・得" => VerbCType::Below2E(match arr[8] {
+                    "基本形" => VerbBelow2ECForm::Basic,
+                    "体言接続" => VerbBelow2ECForm::SubstantiveConjection,
+                    "未然ウ接続" => VerbBelow2ECForm::ImperfectiveUConjection,
+                    "命令ｙｏ" => VerbBelow2ECForm::OrderYO,
+                    other => VerbBelow2ECForm::Other(other.to_string()),
+                }),
+                "五段・カ行促音便ユク" => VerbCType::FiveKA(match arr[8] {
+                    "基本形" => VerbFiveKAYUKUCForm::Basic,
+                    "未然ウ接続" => VerbFiveKAYUKUCForm::ImperfectiveUConjection,
+                    other => VerbFiveKAYUKUCForm::Other(other.to_string()),
+                }),
+                "五段・バ行" => VerbCType::FiveBA(match arr[8] {
+                    "基本形" => VerbFiveBACForm::Basic,
+                    "未然ウ接続" => VerbFiveBACForm::ImperfectiveUConjection,
+                    other => VerbFiveBACForm::Other(other.to_string()),
+                }),
+                "五段・マ行" => VerbCType::FiveMA(match arr[8] {
+                    "基本形" => VerbFiveMACForm::Basic,
+                    "未然ウ接続" => VerbFiveMACForm::ImperfectiveUConjection,
+                    other => VerbFiveMACForm::Other(other.to_string()),
+                }),
+                "五段・ラ行" => VerbCType::FiveRA(match arr[8] {
+                    "体言特殊接続" => VerbFiveRACForm::SubstantiveConjectionSpecial,
+                    "体言特殊接続２" => VerbFiveRACForm::SubstantiveConjectionSpecial2,
+                    "未然特殊" => VerbFiveRACForm::ImperfectiveSpecial,
+                    other => VerbFiveRACForm::Other(other.to_string()),
+                }),
+                "五段・ラ行特殊" => VerbCType::FiveRASpecial(match arr[8] {
+                    "基本形" => VerbFiveRASpecialCForm::Basic,
+                    "未然ウ接続" => VerbFiveRASpecialCForm::ImperfectiveUConjection,
+                    "未然特殊" => VerbFiveRASpecialCForm::ImperfectiveSpecial,
+                    other => VerbFiveRASpecialCForm::Other(other.to_string()),
+                }),
+                "五段・ワ行促音便" => VerbCType::FiveWA(match arr[8] {
+                    "基本形" => VerbFiveWACForm::Basic,
+                    "未然ウ接続" => VerbFiveWACForm::ImperfectiveUConjection,
+                    other => VerbFiveWACForm::Other(other.to_string()),
+                }),
+                other => VerbCType::Other(other.to_string()),
+            }
+        ),
         _ => WordClass::Other(OtherSub::Other(String::new())),
     };
     Word {
