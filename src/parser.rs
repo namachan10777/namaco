@@ -1,8 +1,9 @@
+
 #[allow(dead_code)]
 pub struct DictCfg {
+    surface: usize,
     matrixid: usize,
     gencost: usize,
-    surface: usize,
     wordclass: usize,
     wordsubclass: usize,
     wordsubsubclass: usize,
@@ -703,7 +704,7 @@ pub fn classify(cfg: &DictCfg, arr: &Vec<&str>) -> WordClass {
 }
 
 #[allow(dead_code)]
-pub fn parse_naist_jdic_by_line(cfg: DictCfg, line: &str) -> Word {
+pub fn parse_naist_jdic_by_line(cfg: &DictCfg, line: &str) -> Word {
     let arr: Vec<&str> = line.split(',').collect();
     let matrix_id: usize = arr[cfg.matrixid].parse().unwrap();
     let matrix_id2: usize = arr[cfg.matrixid].parse().unwrap();
@@ -724,4 +725,34 @@ pub fn parse_naist_jdic_by_line(cfg: DictCfg, line: &str) -> Word {
         gencost,
         matrix_id,
     }
+}
+
+use std::fs;
+use std::io;
+use std::io::{BufRead};
+
+#[allow(dead_code)]
+pub fn parse_naist_dict(file: &fs::File) -> Result<Vec<Word>, io::Error> {
+    let mut reader = io::BufReader::new(file);
+    let mut buf = String::new();
+    let mut result = Vec::new();
+    let cfg = DictCfg {
+        surface: 0,
+        matrixid: 1,
+        gencost: 3,
+        wordclass: 4,
+        wordsubclass: 5,
+        wordsubsubclass: 6,
+        wordsubsubsubclass: 7,
+        ctype: 8,
+        cform: 9,
+        original: 10,
+        reading: 11,
+        speaking: 12,
+    };
+    while reader.read_line(&mut buf)? > 0 {
+        result.push(parse_naist_jdic_by_line(&cfg, &buf));
+        buf.clear();
+    }
+    Ok(result)
 }
