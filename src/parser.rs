@@ -27,7 +27,8 @@ pub enum WordClass {
     Interjection,
     Symbol(SymbolSub),
     Filler,
-    Other(OtherSub),
+    Others(OthersSub),
+    Other(String),
 }
 
 pub enum NounSub {
@@ -130,7 +131,7 @@ pub enum AdverbSub {
 }
 
 pub enum PostPositinalParticleSub {
-    NominitiveParticle,
+    NominitiveParticle(NominitiveParticleSub),
     BindingParticle,
     SentenceEndingParticle,
     ConjectionParticle,
@@ -140,6 +141,13 @@ pub enum PostPositinalParticleSub {
     AdverbialParallelEndingParticle,
     ParallelMarker,
     Adnominalize,
+    Other(String),
+}
+
+pub enum NominitiveParticleSub {
+    General,
+    Quote,
+    Collocation,
     Other(String),
 }
 
@@ -154,7 +162,7 @@ pub enum SymbolSub {
     Other(String),
 }
 
-pub enum OtherSub {
+pub enum OthersSub {
     Interjection,
     Other(String),
 }
@@ -308,10 +316,11 @@ pub enum AuxiliaryVerbCType {
     SpecialTAI(AuxiliaryVerbSpecialTAICForm),
     SpecialNU(AuxiliaryVerbSpecialNUCForm),
     SpecialMASU(AuxiliaryVerbSpecialMASUCForm),
-    Constant(AuxiliaryVerbSpecialConstantCForm),
+    Constant(AuxiliaryVerbConstantCForm),
     WrittenLangKI(AuxiliaryVerbWrittenLangKICForm),
     WrittenLangBESHI(AuxiliaryVerbWrittenLangBESHICForm),
     WrittenLangRU(AuxiliaryVerbWrittenLangRUCForm),
+    Other(String),
 }
 
 pub enum AuxiliaryVerbBelow2TACForm {
@@ -349,7 +358,7 @@ pub enum AuxiliaryVerbSpecialTACForm {
 
 pub enum AuxiliaryVerbSpecialTAICForm {
     GARUConjection,
-    Basic,
+    SubstantiveConjection,
     PredicativeGOZAIConjection,
     Other(String),
 }
@@ -366,7 +375,7 @@ pub enum AuxiliaryVerbSpecialMASUCForm {
     Other(String),
 }
 
-pub enum AuxiliaryVerbSpecialConstantCForm {
+pub enum AuxiliaryVerbConstantCForm {
     Basic,
     Other(String),
 }
@@ -599,7 +608,105 @@ pub fn parse_naist_jdic_by_line(cfg: DictCfg, line: &str) -> Word {
         }),
         "連体詞" => WordClass::AdnominalAdjective,
         "接続詞" => WordClass::Conjection,
-        _ => WordClass::Other(OtherSub::Other(String::new())),
+        "助詞" => WordClass::PostPositinalParticle(match arr[cfg.wordsubclass] {
+            "格助詞" => PostPositinalParticleSub::NominitiveParticle(match arr[cfg.wordsubsubclass] {
+                "一般" => NominitiveParticleSub::General,
+                "引用" => NominitiveParticleSub::Quote,
+                "連語" => NominitiveParticleSub::Collocation,
+                other => NominitiveParticleSub::Other(other.to_string()),
+            }),
+            "係助詞" => PostPositinalParticleSub::BindingParticle,
+            "終助詞" => PostPositinalParticleSub::SentenceEndingParticle,
+            "接続助詞" => PostPositinalParticleSub::ConjectionParticle,
+            "特殊" => PostPositinalParticleSub::Special,
+            "副詞化" => PostPositinalParticleSub::Adverbize,
+            "副助詞" => PostPositinalParticleSub::AdverbialParticle,
+            "副助詞／並立助詞／終助詞" => PostPositinalParticleSub::AdverbialParallelEndingParticle,
+            "並立助詞" => PostPositinalParticleSub::ParallelMarker,
+            "連体化" => PostPositinalParticleSub::Adnominalize,
+            other => PostPositinalParticleSub::Other(other.to_string()),
+        }),
+        "助動詞" => WordClass::AuxiliaryVerb(match arr[cfg.ctype] {
+            "下ニ・タ行" => AuxiliaryVerbCType::Below2TA(match arr[cfg.cform] {
+                "命令ｙｏ" => AuxiliaryVerbBelow2TACForm::OrderYO,
+                other => AuxiliaryVerbBelow2TACForm::Other(other.to_string())
+            }),
+            "形容詞・イ段" => AuxiliaryVerbCType::AdjectiveI(match arr[cfg.cform] {
+                "ガル接続" => AuxiliaryVerbAdjectiveICForm::GARUConjection,
+                "基本形" => AuxiliaryVerbAdjectiveICForm::Basic,
+                "体言接続" => AuxiliaryVerbAdjectiveICForm::SubstantiveConjection,
+                "文語基本形" => AuxiliaryVerbAdjectiveICForm::WrittenLangBasic,
+                "連用ゴザイ活用" => AuxiliaryVerbAdjectiveICForm::PredicativeGOZAIConjection,
+                other => AuxiliaryVerbAdjectiveICForm::Other(other.to_string()),
+            }),
+            "形容詞・ラ行アル" => AuxiliaryVerbCType::FiveRAARU(match arr[cfg.cform] {
+                "基本形" => AuxiliaryVerbFiveRAARUCForm::Basic,
+                "体言接続特殊" => AuxiliaryVerbFiveRAARUCForm::SubstantiveConjectionSpecial,
+                "未然ウ接続" => AuxiliaryVerbFiveRAARUCForm::ImperfectiveUConjection,
+                other => AuxiliaryVerbFiveRAARUCForm::Other(other.to_string()),
+            }),
+            "形容詞・ラ行特殊" => AuxiliaryVerbCType::FiveRASpecial(match arr[cfg.cform] {
+                "基本形" => AuxiliaryVerbFiveRASpecialCForm::Basic,
+                "未然ウ接続" => AuxiliaryVerbFiveRASpecialCForm::ImperfectiveUConjection,
+                "未然特殊" => AuxiliaryVerbFiveRASpecialCForm::ImperfectiveSpecial,
+                other => AuxiliaryVerbFiveRASpecialCForm::Other(other.to_string()),
+            }),
+            "特殊・タ" => AuxiliaryVerbCType::SpecialTA(match arr[cfg.cform] {
+                "基本形" => AuxiliaryVerbSpecialTACForm::Basic,
+                other => AuxiliaryVerbSpecialTACForm::Other(other.to_string()),
+            }),
+            "特殊・タイ" => AuxiliaryVerbCType::SpecialTAI(match arr[cfg.cform] {
+                "ガル接続" => AuxiliaryVerbSpecialTAICForm::GARUConjection,
+                "体言接続" => AuxiliaryVerbSpecialTAICForm::SubstantiveConjection,
+                "連用ゴザイ接続" => AuxiliaryVerbSpecialTAICForm::PredicativeGOZAIConjection,
+                other => AuxiliaryVerbSpecialTAICForm::Other(other.to_string()),
+            }),
+            "特殊・ヌ" => AuxiliaryVerbCType::SpecialNU(match arr[cfg.cform] {
+                "体言接続" => AuxiliaryVerbSpecialNUCForm::SubstantiveConjection,
+                "文語基本形" => AuxiliaryVerbSpecialNUCForm::WrittenLangBasic,
+                other => AuxiliaryVerbSpecialNUCForm::Other(other.to_string()),
+            }),
+            "特殊・マス" => AuxiliaryVerbCType::SpecialMASU(match arr[cfg.cform] {
+                "基本形" => AuxiliaryVerbSpecialMASUCForm::Basic,
+                "未然ウ接続" => AuxiliaryVerbSpecialMASUCForm::ImperfectiveUConjection,
+                other => AuxiliaryVerbSpecialMASUCForm::Other(other.to_string()),
+            }),
+            "不変化型" => AuxiliaryVerbCType::Constant(match arr[cfg.cform] {
+                "基本形" => AuxiliaryVerbConstantCForm::Basic,
+                other => AuxiliaryVerbConstantCForm::Other(other.to_string()),
+            }),
+            "文語・キ" => AuxiliaryVerbCType::WrittenLangKI(match arr[cfg.cform] {
+                "体言接続" => AuxiliaryVerbWrittenLangKICForm::SubstantiveConjection,
+                other => AuxiliaryVerbWrittenLangKICForm::Other(other.to_string()),
+            }),
+            "文語・ベシ" => AuxiliaryVerbCType::WrittenLangBESHI(match arr[cfg.cform] {
+                "基本形" => AuxiliaryVerbWrittenLangBESHICForm::Basic,
+                "体言接続" => AuxiliaryVerbWrittenLangBESHICForm::SubstantiveConjection,
+                other => AuxiliaryVerbWrittenLangBESHICForm::Other(other.to_string()),
+            }),
+            "文語・ル" => AuxiliaryVerbCType::WrittenLangRU(match arr[cfg.cform] {
+                "命令ｙｏ" => AuxiliaryVerbWrittenLangRUCForm::OrderYO,
+                other => AuxiliaryVerbWrittenLangRUCForm::Other(other.to_string()),
+            }),
+            other => AuxiliaryVerbCType::Other(other.to_string()),
+        }),
+        "感動詞" => WordClass::Interjection,
+        "記号" => WordClass::Symbol(match arr[cfg.wordsubclass] {
+            "アルファベット" => SymbolSub::Alphabet,
+            "一般" => SymbolSub::General,
+            "括弧開" => SymbolSub::ParanthesisOpen,
+            "括弧閉" => SymbolSub::ParanthesisClose,
+            "句点" => SymbolSub::Period,
+            "空白" => SymbolSub::Space,
+            "読点" => SymbolSub::Comma,
+            other => SymbolSub::Other(other.to_string()),
+        }),
+        "フィラー" => WordClass::Filler,
+        "その他" => WordClass::Others(match arr[cfg.wordsubclass] {
+            "間投" => OthersSub::Interjection,
+            other => OthersSub::Other(other.to_string()),
+        }),
+        other => WordClass::Other(other.to_string()),
     };
     Word {
         class,
