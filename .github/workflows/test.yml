@@ -8,6 +8,11 @@ jobs:
 
     steps:
     - uses: actions/checkout@v1
+
+    - name: apt
+      sudo apt-get update
+      sudo apt-get upgrade -y
+
     - name: Test
       run: cargo test --verbose
 
