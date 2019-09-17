@@ -34,7 +34,7 @@ jobs:
         cd build
         cmake ..
         make
-        make install DESTDIR=../../kcov-build
+        sudo make install DESTDIR=../../kcov-build
         cd ../..
         rm -rf kcov-master
         for file in target/debug/namaco-*[^\.d]; do \
