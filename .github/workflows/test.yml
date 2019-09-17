@@ -46,5 +46,5 @@ jobs:
           mkdir -p "target/cov/$(basename $file)"; \
           ./kcov-build/usr/local/bin/kcov --exclude-pattern=/.cargo,/usr/lib --verify "target/cov/$(basename $file)" "$file"; \
         done
-        bash <(curl -s https://codecov.io/bash) ${{ Secrets.CODECOV_TOKEN }}
+        bash <(curl -s https://codecov.io/bash) ${{ secrets.CODECOV_TOKEN }}
         echo "Uploaded code coverage"
