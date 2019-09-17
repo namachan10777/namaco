@@ -25,7 +25,7 @@ jobs:
 
     - name: Coverage
       run: |
-        apt-get install -y libcurl4-openssl-dev libelf-dev libdw-dev cmake gcc binutils-dev libiberty-dev
+        sudo apt-get install -y libcurl4-openssl-dev libelf-dev libdw-dev cmake gcc binutils-dev libiberty-dev
         env RUSTFLAGS="-C link-dead-code" cargo test --no-run
         wget https://github.com/SimonKagstrom/kcov/archive/master.tar.gz
         tar xzf master.tar.gz
