@@ -1,0 +1,45 @@
+name: test
+
+on: [push]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v1
+    - name: Test
+      run: cargo test --verbose
+
+    - name: Callgrind
+      run: |
+        apt-get install -y valgrind
+        cargo build --release
+        valgrind --tool=callgrind --dump-instr=yes --collect-jumps=yes --simulate-cache=yes ./target/release/namaco
+        mv callgrind.out.* callgrind.out
+
+    - uses: actions/upload-artifact@master
+      with:
+        name: callgrind.out
+        path: callgrind.out
+
+    - name: Coverage
+      run: |
+        apt-get install -y libcurl4-openssl-dev libelf-dev libdw-dev cmake gcc binutils-dev libiberty-dev
+        env RUSTFLAGS="-C link-dead-code" cargo test --no-run
+        wget https://github.com/SimonKagstrom/kcov/archive/master.tar.gz
+        tar xzf master.tar.gz
+        cd kcov-master
+        mkdir build
+        cd build
+        cmake ..
+        make
+        make install DESTDIR=../../kcov-build
+        cd ../..
+        rm -rf kcov-master
+        for file in target/debug/namaco-*[^\.d]; do \
+          mkdir -p "target/cov/$(basename $file)"; \
+          ./kcov-build/usr/local/bin/kcov --exclude-pattern=/.cargo,/usr/lib --verify "target/cov/$(basename $file)" "$file"; \
+        done
+        bash <(curl -s https://codecov.io/bash) $CODECOV_TOKEN
+        echo "Uploaded code coverage"
