@@ -1,5 +1,5 @@
 # Namaco
-[![ci_status](https://circleci.com/gh/namachan10777/namaco/tree/master.svg?style=shield&circle-token=d3af56239dfb721f37a0feb7e522219d2d907013)](https://circleci.com/gh/namachan10777/namaco)
+[![ci_status](https://github.com/namachan10777/namachan10777.github.io/workflows/test/badge.svg)](https://github.com/namachan10777/namaco/actions)
 [![Build Status](https://travis-ci.org/namachan10777/namaco.svg?branch=master)](https://travis-ci.org/namachan10777/namaco)
 [![codecov](https://codecov.io/gh/namachan10777/namaco/branch/master/graph/badge.svg)](https://codecov.io/gh/namachan10777/namaco)
 ![BSL-1.0](https://img.shields.io/badge/License-BSL%201.0-blue.svg)
