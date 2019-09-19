@@ -1,0 +1,29 @@
+name: test
+
+on: [push]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v1
+
+    - name: apt
+      run: |
+        sudo apt-get update
+
+    - name: Test
+      run: cargo test --verbose
+
+    - name: Callgrind
+      run: |
+        sudo apt-get install -y valgrind
+        cargo build --release
+        valgrind --tool=callgrind --dump-instr=yes --collect-jumps=yes --simulate-cache=yes ./target/release/namaco
+        mv callgrind.out.* callgrind.out
+
+    - uses: actions/upload-artifact@master
+      with:
+        name: callgrind.out
+        path: callgrind.out
