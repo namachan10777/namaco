@@ -473,7 +473,7 @@ mod test_paste {
 }
 
 impl<T> Trie<T> {
-    fn push_put(&mut self, target_idx: usize) -> Result<(), ()> {
+    fn push_out(&mut self, target_idx: usize) -> Result<(), ()> {
         if self.tree[target_idx].check == NO_PARENT {
             if self.tree[target_idx].base == NO_CHILD {
                 return Ok(())
@@ -507,7 +507,7 @@ mod test_push_out {
             tree,
             storage: Vec::new(),
         };
-        trie.push_put(1).unwrap();
+        trie.push_out(1).unwrap();
         let mut ans = vec![Node::default(); 512];
         ans[0] = Node::root(4);
         ans[5] = Node::sec(0, 8, None);
@@ -547,7 +547,7 @@ impl<T> Trie<T> {
                         parent_idx = child_idx;
                     }
                     else {
-                        self.push_put(child_idx)?;
+                        self.push_out(child_idx)?;
                         self.tree[child_idx] = Node::sec(check, 0, None);
                         extended = true;
                         parent_idx = child_idx;
@@ -555,7 +555,7 @@ impl<T> Trie<T> {
                 },
                 DecodedNode::Sec(check, _, _) => {
                     if check != parent_idx {
-                        self.push_put(child_idx)?;
+                        self.push_out(child_idx)?;
                         self.tree[child_idx] = Node::sec(check, 0, None);
                         extended = true;
                         parent_idx = child_idx;
