@@ -13,10 +13,28 @@ jobs:
       run: |
         sudo apt-get update
 
-    - name: Test
+    - uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+        override: true
+    - name: test for stable
       run: cargo test --verbose
 
-    - name: Callgrind
+    - uses: actions-rs/toolchain@v1
+      with:
+        toolchain: beta 
+        override: true
+    - name: test for beta 
+      run: cargo test --verbose
+
+    - uses: actions-rs/toolchain@v1
+      with:
+        toolchain: nightly 
+        override: true
+    - name: test for nightly 
+      run: cargo test --verbose
+
+    - name: callgrind
       run: |
         sudo apt-get install -y valgrind
         cargo build --release
