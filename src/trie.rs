@@ -473,10 +473,10 @@ mod test_paste {
 }
 
 impl<T> Trie<T> {
-    fn push_out(&mut self, target_idx: usize) -> Result<(), ()> {
+    fn push_out(&mut self, target_idx: usize) -> Result<usize, ()> {
         if self.tree[target_idx].check == NO_PARENT {
             if self.tree[target_idx].base == NO_CHILD {
-                return Ok(())
+                return Ok(self.tree[target_idx].base)
             }
             else {
                 return Err(())
@@ -486,11 +486,10 @@ impl<T> Trie<T> {
         let row = self.read_row(parent_idx);
         self.erase_row(parent_idx);
         self.tree[target_idx] = Node::term(0, 0);
-        let base = self.reallocate_base(&row2mask(row));
-        self.paste(row, [Node::blank(); 256], self.tree[parent_idx].base);
+        let base = self.paste(row, [Node::blank(); 256], self.tree[parent_idx].base);
         self.tree[parent_idx].base = base;
         self.tree[target_idx] = Node::blank();
-        return Ok(())
+        return Ok(base)
     }
 }
 #[cfg(test)]
@@ -547,16 +546,40 @@ impl<T> Trie<T> {
                         parent_idx = child_idx;
                     }
                     else {
-                        self.push_out(child_idx)?;
-                        self.tree[child_idx] = Node::sec(check, 0, None);
+                        let parent = self.tree[parent_idx];
+                        let old_base = if parent.check < self.tree.len() {
+                            self.tree[parent.check].base
+                        }
+                        else {
+                            NO_CHILD
+                        };
+                        let new_base = self.push_out(child_idx)?;
+                        if parent != self.tree[parent_idx] {
+                            self.tree[child_idx] = Node::sec(old_base ^ parent_idx ^ new_base, 0, None);
+                        }
+                        else {
+                            self.tree[child_idx] = Node::sec(parent_idx, 0, None);
+                        }
                         extended = true;
                         parent_idx = child_idx;
                     }
                 },
                 DecodedNode::Sec(check, _, _) => {
                     if check != parent_idx {
-                        self.push_out(child_idx)?;
-                        self.tree[child_idx] = Node::sec(check, 0, None);
+                        let parent = self.tree[parent_idx];
+                        let old_base = if parent.check < self.tree.len() {
+                            self.tree[parent.check].base
+                        }
+                        else {
+                            NO_CHILD
+                        };
+                        let new_base = self.push_out(child_idx)?;
+                        if parent != self.tree[parent_idx] {
+                            self.tree[child_idx] = Node::sec(old_base ^ parent_idx ^ new_base, 0, None);
+                        }
+                        else {
+                            self.tree[child_idx] = Node::sec(parent_idx, 0, None);
+                        }
                         extended = true;
                         parent_idx = child_idx;
                     }
@@ -608,17 +631,22 @@ impl<T> Trie<T> {
 mod test_add_find {
     use super::*;
     #[test]
-    fn test_add_fin() {
+    fn test_add_find() {
         let mut trie: Trie<String> = Trie::new();
         trie.add(&[1, 2, 3], "123".to_string()).unwrap();
         trie.add(&[0], "0".to_string()).unwrap();
         trie.add(&[1, 2], "12".to_string()).unwrap();
         trie.add(&[1, 2, 0], "120".to_string()).unwrap();
         trie.add(&[0, 1], "01".to_string()).unwrap();
+        trie.add(&[2, 0], "20".to_string()).unwrap();
+        trie.add(&[2, 1], "21".to_string()).unwrap();
+
         assert_eq!(trie.find(&[0]), Ok(&"0".to_string()));
         assert_eq!(trie.find(&[1, 2, 3]), Ok(&"123".to_string()));
         assert_eq!(trie.find(&[1, 2]), Ok(&"12".to_string()));
         assert_eq!(trie.find(&[1, 2, 0]), Ok(&"120".to_string()));
         assert_eq!(trie.find(&[0, 1]), Ok(&"01".to_string()));
+        assert_eq!(trie.find(&[2, 0]), Ok(&"20".to_string()));
+        assert_eq!(trie.find(&[2, 1]), Ok(&"21".to_string()));
     }
 }
