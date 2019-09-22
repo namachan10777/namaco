@@ -258,7 +258,9 @@ mod test_row2mask {
 }
 
 impl<T> Trie<T> {
+    // To reallocate base and expand tree if need to do.
     fn reallocate_base(&mut self, target: &[bool]) -> usize {
+        // search from existent area
         for i in 0..self.tree.len() - 256 {
             let mut safe = true;
             for j in 0..256 {
@@ -269,7 +271,9 @@ impl<T> Trie<T> {
             }
         }
         let half = self.tree.len();
+        // expand tree
         self.tree.resize(half * 2, Node::blank());
+        // search base straddling border of allocated area.
         for i in half-1..half + 255 {
             let mut safe = true;
             for j in 0..256 {
@@ -279,6 +283,7 @@ impl<T> Trie<T> {
                 return i;
             }
         }
+        // definitely free
         half + 256
     }
 }
@@ -393,9 +398,10 @@ mod test_read_erase_row {
 }
 
 impl<T> Trie<T> {
-    // This function forcely overrides tree
+    // This function forcely overwrite tree
     // 存在しなかったのにrowに入っているとfromを誤認する
     fn paste(&mut self, row: Row, addition: Row, from: usize) -> usize {
+        // make mask
         let mut mask = [false; 256];
         for i in 0..256 {
             mask[i] = row[i].check != NO_PARENT
@@ -404,9 +410,12 @@ impl<T> Trie<T> {
                 || addition[i].base != NO_CHILD;
         }
         let to = self.reallocate_base(&mask);
+        // place
         for i in 0..256 {
             if row[i].check != NO_PARENT {
+                // place bro
                 self.tree[to ^ i] = row[i];
+                // update children's check
                 for j in 0..256 {
                     if row[i].base != NO_CHILD && self.tree[row[i].base ^ j].check == from ^ i {
                         self.tree[row[i].base ^ j].check = to ^ i;
@@ -414,6 +423,7 @@ impl<T> Trie<T> {
                 }
             }
         }
+        // additional placement without updation of children's check
         for i in 0..256 {
             if addition[i].check != NO_PARENT || addition[i].base != NO_CHILD {
                 self.tree[to ^ i] = addition[i];
@@ -474,20 +484,28 @@ mod test_paste {
 
 impl<T> Trie<T> {
     fn push_out(&mut self, target_idx: usize) -> Result<usize, ()> {
+        // NO_PARENT means Root or Blank
         if self.tree[target_idx].check == NO_PARENT {
+            // Blank
             if self.tree[target_idx].base == NO_CHILD {
                 return Ok(self.tree[target_idx].base)
             }
+            // Root (cannot move)
             else {
                 return Err(())
             }
         }
+        // This stmt always succes because NO_PARENT condition was excluded in above stmt.
         let parent_idx = self.tree[target_idx].check;
         let row = self.read_row(parent_idx);
         self.erase_row(parent_idx);
+        // insert dummy
         self.tree[target_idx] = Node::term(0, 0);
+        // replace current row
         let base = self.paste(row, [Node::blank(); 256], self.tree[parent_idx].base);
+        // fix parent's base
         self.tree[parent_idx].base = base;
+        // put out dummy
         self.tree[target_idx] = Node::blank();
         return Ok(base)
     }
@@ -545,6 +563,7 @@ impl<T> Trie<T> {
                         extended = false;
                         parent_idx = child_idx;
                     }
+                    // conflict case
                     else {
                         let parent = self.tree[parent_idx];
                         let old_base = if parent.check < self.tree.len() {
@@ -554,7 +573,11 @@ impl<T> Trie<T> {
                             NO_CHILD
                         };
                         let new_base = self.push_out(child_idx)?;
+                        // if parent was included in target of push_out
                         if parent != self.tree[parent_idx] {
+                            // old_base ^ parent_idx: relative position
+                            // (old_base ^ parent_idx) ^ new_base: new absolute position
+                            // A ^ B = C ⇒ C ^ A = B ∩ C ^ B = A
                             self.tree[child_idx] = Node::sec(old_base ^ parent_idx ^ new_base, 0, None);
                         }
                         else {
