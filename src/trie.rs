@@ -618,21 +618,30 @@ mod test_add_find {
     #[test]
     fn test_add_find() {
         let mut trie: Trie<String> = Trie::new();
+        trie.add(&[1, 1], "11".to_string()).unwrap();
         trie.add(&[1, 2, 3], "123".to_string()).unwrap();
         trie.add(&[0], "0".to_string()).unwrap();
+        trie.add(&[0, 0], "00".to_string()).unwrap();
         trie.add(&[1, 2], "12".to_string()).unwrap();
         trie.add(&[1, 2, 0], "120".to_string()).unwrap();
+        trie.add(&[3, 1, 3], "313".to_string()).unwrap();
+        trie.add(&[1, 6, 1], "161".to_string()).unwrap();
         trie.add(&[0, 1], "01".to_string()).unwrap();
         trie.add(&[2, 0], "20".to_string()).unwrap();
         trie.add(&[2, 1], "21".to_string()).unwrap();
 
-
         assert_eq!(trie.find(&[0]), Ok(&"0".to_string()));
+        assert_eq!(trie.find(&[0]), Ok(&"0".to_string()));
+        assert_eq!(trie.find(&[0, 0]), Ok(&"00".to_string()));
         assert_eq!(trie.find(&[1, 2, 3]), Ok(&"123".to_string()));
         assert_eq!(trie.find(&[1, 2]), Ok(&"12".to_string()));
         assert_eq!(trie.find(&[1, 2, 0]), Ok(&"120".to_string()));
+        assert_eq!(trie.find(&[3, 1, 3]), Ok(&"313".to_string()));
+        assert_eq!(trie.find(&[1, 6, 1]), Ok(&"161".to_string()));
         assert_eq!(trie.find(&[0, 1]), Ok(&"01".to_string()));
         assert_eq!(trie.find(&[2, 0]), Ok(&"20".to_string()));
         assert_eq!(trie.find(&[2, 1]), Ok(&"21".to_string()));
+        assert_eq!(trie.find(&[1]), Err(()));
+        assert_eq!(trie.find(&[7, 4]), Err(()));
     }
 }
