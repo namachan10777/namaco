@@ -545,14 +545,14 @@ impl<T> Trie<T> {
             let child = self.tree[child_idx];
             if child.check == NO_PARENT {
                 if child.base == NO_CHILD {
-                    self.tree[child_idx] = Node::sec(parent_idx, 0, None);
+                    self.tree[child_idx] = Node::term(parent_idx, NO_ITEM);
                     parent_idx = child_idx;
                 }
                 // root case
                 else {
                     let row = self.read_row(parent_idx);
                     let mut addition = [Node::blank(); 256];
-                    addition[*octet as usize] = Node::sec(parent_idx, 0, None);
+                    addition[*octet as usize] = Node::term(parent_idx, NO_ITEM);
                     self.erase_row(parent_idx);
                     let new_base = self.paste(row, addition, child.base);
                     self.tree[parent_idx].base = new_base;
@@ -578,10 +578,10 @@ impl<T> Trie<T> {
                         // old_base ^ parent_idx: relative position
                         // (old_base ^ parent_idx) ^ new_base: new absolute position
                         // A ^ B = C ⇒ C ^ A = B ∩ C ^ B = A
-                        self.tree[child_idx] = Node::sec(old_base ^ parent_idx ^ new_base, 0, None);
+                        self.tree[child_idx] = Node::term(old_base ^ parent_idx ^ new_base, NO_ITEM);
                     }
                     else {
-                        self.tree[child_idx] = Node::sec(parent_idx, 0, None);
+                        self.tree[child_idx] = Node::term(parent_idx, NO_ITEM);
                     }
                     parent_idx = child_idx;
                 }
