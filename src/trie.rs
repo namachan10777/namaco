@@ -49,7 +49,6 @@ impl Default for DecodedNode {
     }
 }
 
-const MASK: usize = 0x7fffffffffffffff;
 const NO_PARENT: usize = usize::MAX;
 const NO_ITEM: usize = usize::MAX;
 const NO_CHILD: usize = usize::MAX;
@@ -72,7 +71,7 @@ impl Into<DecodedNode> for Node {
                 DecodedNode::Sec(self.check, self.base, None)
             }
             else {
-                DecodedNode::Sec(self.check, self.base, Some(self.id & MASK))
+                DecodedNode::Sec(self.check, self.base, Some(self.id))
             }
         }
     }
@@ -434,7 +433,7 @@ impl<T> Trie<T> {
 }
 
 #[allow(dead_code)]
-fn decode(x: Vec<Node>) -> Vec<DecodedNode> {
+fn decode(x: &Vec<Node>) -> Vec<DecodedNode> {
     x.iter().map(|x| Into::<DecodedNode>::into(x.clone())).collect()
 }
 
@@ -478,7 +477,7 @@ mod test_paste {
         let mut ans = vec![Node::blank(); 512];
         ans[0] = Node::root(0);
         ans[1] = Node::sec(0, 0, None);
-        assert_eq!(decode(trie2.tree), decode(ans));
+        assert_eq!(decode(&trie2.tree), decode(&ans));
     }
 }
 
@@ -530,7 +529,7 @@ mod test_push_out {
         ans[5] = Node::sec(0, 8, None);
         ans[6] = Node::term(0, 0);
         ans[8] = Node::term(5, 0);
-        assert_eq!(decode(trie.tree), decode(ans));
+        assert_eq!(decode(&trie.tree), decode(&ans));
     }
 }
 
@@ -538,101 +537,64 @@ impl<T> Trie<T> {
     #[allow(dead_code)]
     pub fn add(&mut self, way: &[u8], cargo: T) -> Result<(), ()> {
         let mut parent_idx = 0;
-        let mut extended = false;
         for octet in way {
+            if self.tree[parent_idx].base == NO_CHILD {
+                self.tree[parent_idx].base = 0;
+            }
             let child_idx = self.tree[parent_idx].base ^ (*octet as usize);
-            match Into::<DecodedNode>::into(self.tree[child_idx]) {
-                DecodedNode::Root(base) => {
+            let child = self.tree[child_idx];
+            if child.check == NO_PARENT {
+                if child.base == NO_CHILD {
+                    self.tree[child_idx] = Node::sec(parent_idx, 0, None);
+                    parent_idx = child_idx;
+                }
+                // root case
+                else {
                     let row = self.read_row(parent_idx);
                     let mut addition = [Node::blank(); 256];
                     addition[*octet as usize] = Node::sec(parent_idx, 0, None);
                     self.erase_row(parent_idx);
-                    let new_base = self.paste(row, addition, base);
+                    let new_base = self.paste(row, addition, child.base);
                     self.tree[parent_idx].base = new_base;
                     parent_idx = (*octet as usize) ^ new_base;
-                    extended = true;
-                },
-                DecodedNode::Blank => {
-                    self.tree[child_idx] = Node::sec(parent_idx, 0, None);
-                    extended = true;
+                }
+            }
+            else {
+                if child.check == parent_idx {
                     parent_idx = child_idx;
-                },
-                DecodedNode::Term(check, id) => {
-                    if check == parent_idx {
-                        self.tree[child_idx] = Node::sec(check, 0, Some(id));
-                        extended = false;
-                        parent_idx = child_idx;
-                    }
-                    // conflict case
-                    else {
-                        let parent = self.tree[parent_idx];
-                        let old_base = if parent.check < self.tree.len() {
-                            self.tree[parent.check].base
-                        }
-                        else {
-                            NO_CHILD
-                        };
-                        let new_base = self.push_out(child_idx)?;
-                        // if parent was included in target of push_out
-                        if parent != self.tree[parent_idx] {
-                            // old_base ^ parent_idx: relative position
-                            // (old_base ^ parent_idx) ^ new_base: new absolute position
-                            // A ^ B = C ⇒ C ^ A = B ∩ C ^ B = A
-                            self.tree[child_idx] = Node::sec(old_base ^ parent_idx ^ new_base, 0, None);
-                        }
-                        else {
-                            self.tree[child_idx] = Node::sec(parent_idx, 0, None);
-                        }
-                        extended = true;
-                        parent_idx = child_idx;
-                    }
-                },
-                DecodedNode::Sec(check, _, _) => {
-                    if check != parent_idx {
-                        let parent = self.tree[parent_idx];
-                        let old_base = if parent.check < self.tree.len() {
-                            self.tree[parent.check].base
-                        }
-                        else {
-                            NO_CHILD
-                        };
-                        let new_base = self.push_out(child_idx)?;
-                        if parent != self.tree[parent_idx] {
-                            self.tree[child_idx] = Node::sec(old_base ^ parent_idx ^ new_base, 0, None);
-                        }
-                        else {
-                            self.tree[child_idx] = Node::sec(parent_idx, 0, None);
-                        }
-                        extended = true;
-                        parent_idx = child_idx;
+                }
+                // conflict case
+                else {
+                    let parent = self.tree[parent_idx];
+                    let old_base = if parent.check < self.tree.len() {
+                        self.tree[parent.check].base
                     }
                     else {
-                        extended = false;
-                        parent_idx = child_idx;
+                        NO_CHILD
+                    };
+                    let new_base = self.push_out(child_idx)?;
+                    // if parent was included in target of push_out
+                    if parent != self.tree[parent_idx] {
+                        // old_base ^ parent_idx: relative position
+                        // (old_base ^ parent_idx) ^ new_base: new absolute position
+                        // A ^ B = C ⇒ C ^ A = B ∩ C ^ B = A
+                        self.tree[child_idx] = Node::sec(old_base ^ parent_idx ^ new_base, 0, None);
                     }
-                },
+                    else {
+                        self.tree[child_idx] = Node::sec(parent_idx, 0, None);
+                    }
+                    parent_idx = child_idx;
+                }
             }
         }
         let cargo_id = self.storage.len();
         self.storage.push(cargo);
-        match Into::<DecodedNode>::into(self.tree[parent_idx]) {
-            DecodedNode::Blank => unreachable!(),
-            DecodedNode::Root(_) => {
-                unreachable!();
-            },
-            DecodedNode::Term(_, _) => unreachable!(),
-            DecodedNode::Sec(check, base, _) => {
-                if extended {
-                    self.tree[parent_idx] = Node::term(check, cargo_id);
-                }
-                else {
-                    self.tree[parent_idx] = Node::sec(check, base, Some(cargo_id));
-                }
-            }
-        }
+        self.tree[parent_idx].id = cargo_id;
         Ok(())
     }
+}
 
+impl<T> Trie<T> {
     #[allow(dead_code)]
     pub fn find(&self, way: &[u8]) -> Result<&T, ()> {
         match self.explore(way) {
@@ -663,6 +625,7 @@ mod test_add_find {
         trie.add(&[0, 1], "01".to_string()).unwrap();
         trie.add(&[2, 0], "20".to_string()).unwrap();
         trie.add(&[2, 1], "21".to_string()).unwrap();
+
 
         assert_eq!(trie.find(&[0]), Ok(&"0".to_string()));
         assert_eq!(trie.find(&[1, 2, 3]), Ok(&"123".to_string()));
