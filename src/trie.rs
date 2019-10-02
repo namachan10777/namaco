@@ -28,6 +28,14 @@ impl Node {
         Node::from(DecodedNode::Sec(check, base, id))
     }
 
+    fn node(check: usize, base: usize, id: usize) -> Self {
+        Node {
+            check,
+            base,
+            id,
+        }
+    }
+
     fn blank() -> Self {
         Node::default()
     }
@@ -578,14 +586,14 @@ impl<T> Trie<T> {
             let child = self.tree[child_idx];
             if child.check == NO_PARENT {
                 if child.base == NO_CHILD {
-                    self.tree[child_idx] = Node::term(parent_idx, NO_ITEM);
+                    self.tree[child_idx] = Node::node(parent_idx, NO_CHILD, NO_ITEM);
                     parent_idx = child_idx;
                 }
                 // root case
                 else {
                     let row = self.read_row(parent_idx);
                     let mut addition = [Node::blank(); 256];
-                    addition[*octet as usize] = Node::term(parent_idx, NO_ITEM);
+                    addition[*octet as usize] = Node::node(parent_idx, NO_CHILD, NO_ITEM);
                     self.erase_row(parent_idx);
                     let new_base = self.paste(row, addition, child.base);
                     self.tree[parent_idx].base = new_base;
