@@ -626,6 +626,7 @@ mod test_add_find {
     #[test]
     fn test_add_find() {
         let mut trie: Trie<String> = Trie::new();
+        trie.add(&[2, 1], "21".to_string()).unwrap();
         trie.add(&[1, 1], "11".to_string()).unwrap();
         trie.add(&[1, 2, 3], "123".to_string()).unwrap();
         trie.add(&[0], "0".to_string()).unwrap();
@@ -636,7 +637,6 @@ mod test_add_find {
         trie.add(&[1, 6, 1], "161".to_string()).unwrap();
         trie.add(&[0, 1], "01".to_string()).unwrap();
         trie.add(&[2, 0], "20".to_string()).unwrap();
-        trie.add(&[2, 1], "21".to_string()).unwrap();
 
         assert_eq!(trie.find(&[0]), Ok(&"0".to_string()));
         assert_eq!(trie.find(&[0]), Ok(&"0".to_string()));
