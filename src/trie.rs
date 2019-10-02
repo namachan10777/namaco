@@ -542,6 +542,31 @@ mod test_push_out {
 }
 
 impl<T> Trie<T> {
+    fn insert_by_push_out(&mut self, target_idx: usize, parent_idx: usize) -> Result<usize, PushOutErr> {
+        let parent = self.tree[parent_idx];
+
+        let old_base = if parent.check < self.tree.len() {
+            self.tree[parent.check].base
+        }
+        else {
+            NO_CHILD
+        };
+        let new_base = self.push_out(target_idx).unwrap();
+        // if parent was included in target of push_out
+        if parent != self.tree[parent_idx] {
+            // old_base ^ parent_idx: relative position
+            // (old_base ^ parent_idx) ^ new_base: new absolute position
+            // A ^ B = C ⇒ C ^ A = B ∩ C ^ B = A
+            self.tree[target_idx] = Node::term(old_base ^ parent_idx ^ new_base, NO_ITEM);
+        }
+        else {
+            self.tree[target_idx] = Node::term(parent_idx, NO_ITEM);
+        }
+        Ok(target_idx)
+    }
+}
+
+impl<T> Trie<T> {
     #[allow(dead_code)]
     pub fn add(&mut self, way: &[u8], cargo: T) -> Result<(), ()> {
         let mut parent_idx = 0;
@@ -573,25 +598,7 @@ impl<T> Trie<T> {
                 }
                 // conflict case
                 else {
-                    let parent = self.tree[parent_idx];
-                    let old_base = if parent.check < self.tree.len() {
-                        self.tree[parent.check].base
-                    }
-                    else {
-                        NO_CHILD
-                    };
-                    let new_base = self.push_out(child_idx).unwrap();
-                    // if parent was included in target of push_out
-                    if parent != self.tree[parent_idx] {
-                        // old_base ^ parent_idx: relative position
-                        // (old_base ^ parent_idx) ^ new_base: new absolute position
-                        // A ^ B = C ⇒ C ^ A = B ∩ C ^ B = A
-                        self.tree[child_idx] = Node::term(old_base ^ parent_idx ^ new_base, NO_ITEM);
-                    }
-                    else {
-                        self.tree[child_idx] = Node::term(parent_idx, NO_ITEM);
-                    }
-                    parent_idx = child_idx;
+                    parent_idx = self.insert_by_push_out(child_idx, parent_idx).unwrap();
                 }
             }
         }
