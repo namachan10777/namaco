@@ -24,6 +24,7 @@ impl Node {
     }
 
     
+    #[allow(dead_code)] // used in test
     fn sec(check: usize, base: usize, id: Option<usize>) -> Self {
         Node::from(DecodedNode::Sec(check, base, id))
     }
@@ -231,36 +232,6 @@ mod test_explore {
         assert_eq!(trie.explore(&[3]), Err((0, 0)));
         assert_eq!(trie.explore(&[2, 1, 0]), Err((1, 2)));
         assert_eq!(trie.explore(&[2, 3, 0]), Err((2, 7)));
-    }
-}
-
-fn row2mask(row: Row) -> [bool;256] {
-    let mut mask = [false; 256];
-    for i in 0..256 {
-        mask[i] = match Into::<DecodedNode>::into(row[i]) {
-            DecodedNode::Term(_, _) => true,
-            DecodedNode::Root(_) => true,
-            DecodedNode::Sec(_, _, _) => true,
-            DecodedNode::Blank => false,
-        }
-    }
-    mask
-}
-#[cfg(test)]
-mod test_row2mask {
-    use super::*;
-    #[test]
-    fn test_row2mask() {
-        let mut row = [Node::blank(); 256];
-        row[2] = Node::term(0, 0);
-        row[9] = Node::sec(0, 0, None);
-        row[200] = Node::root(0);
-        row[222] = Node::from(DecodedNode::Blank);
-        let mut mask = [false; 256];
-        mask[2] = true;
-        mask[9] = true;
-        mask[200] = true;
-        assert_eq!(row2mask(row).to_vec(), mask.to_vec());
     }
 }
 
