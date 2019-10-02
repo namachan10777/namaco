@@ -481,17 +481,23 @@ mod test_paste {
     }
 }
 
+#[derive(Debug, PartialEq)]
+enum PushOutErr {
+    Nop,
+    IsRoot,
+}
+
 impl<T> Trie<T> {
-    fn push_out(&mut self, target_idx: usize) -> Result<usize, ()> {
+    fn push_out(&mut self, target_idx: usize) -> Result<usize, PushOutErr> {
         // NO_PARENT means Root or Blank
         if self.tree[target_idx].check == NO_PARENT {
             // Blank
             if self.tree[target_idx].base == NO_CHILD {
-                return Ok(self.tree[target_idx].base)
+                return Err(PushOutErr::Nop)
             }
             // Root (cannot move)
             else {
-                return Err(())
+                return Err(PushOutErr::IsRoot)
             }
         }
         // This stmt always succes because NO_PARENT condition was excluded in above stmt.
@@ -523,7 +529,9 @@ mod test_push_out {
             tree,
             storage: Vec::new(),
         };
-        trie.push_out(1).unwrap();
+        assert_eq!(trie.push_out(0), Err(PushOutErr::IsRoot));
+        assert_eq!(trie.push_out(3), Err(PushOutErr::Nop));
+        assert_eq!(trie.push_out(1), Ok(4));
         let mut ans = vec![Node::default(); 512];
         ans[0] = Node::root(4);
         ans[5] = Node::sec(0, 8, None);
@@ -572,7 +580,7 @@ impl<T> Trie<T> {
                     else {
                         NO_CHILD
                     };
-                    let new_base = self.push_out(child_idx)?;
+                    let new_base = self.push_out(child_idx).unwrap();
                     // if parent was included in target of push_out
                     if parent != self.tree[parent_idx] {
                         // old_base ^ parent_idx: relative position
