@@ -543,6 +543,17 @@ impl<T> Trie<T> {
         }
         Ok(target_idx)
     }
+
+    fn insert_by_slide_brothers(&mut self, target_idx: usize, parent_idx: usize) -> Result<usize, ()> {
+        let parent = self.tree[parent_idx];
+        let row = self.read_row(parent_idx);
+        self.erase_row(parent_idx);
+        let mut addition = [Node::blank(); 256];
+        addition[parent.base ^ target_idx] = Node::node(parent_idx, NO_CHILD, NO_ITEM);
+        let new_base = self.paste(row, addition, parent.base);
+        self.tree[parent_idx].base = new_base;
+        Ok(target_idx ^ parent.base ^ new_base)
+    }
 }
 
 impl<T> Trie<T> {
@@ -562,13 +573,7 @@ impl<T> Trie<T> {
                 }
                 // root case
                 else {
-                    let row = self.read_row(parent_idx);
-                    let mut addition = [Node::blank(); 256];
-                    addition[*octet as usize] = Node::node(parent_idx, NO_CHILD, NO_ITEM);
-                    self.erase_row(parent_idx);
-                    let new_base = self.paste(row, addition, child.base);
-                    self.tree[parent_idx].base = new_base;
-                    parent_idx = (*octet as usize) ^ new_base;
+                    parent_idx = self.insert_by_slide_brothers(child_idx, parent_idx).unwrap();
                 }
             }
             else {
