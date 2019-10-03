@@ -467,62 +467,18 @@ enum PushOutErr {
 }
 
 impl<T> Trie<T> {
-    fn push_out(&mut self, target_idx: usize) -> Result<usize, PushOutErr> {
-        // NO_PARENT means Root or Blank
-        if self.tree[target_idx].check == NO_PARENT {
-            // Blank
-            if self.tree[target_idx].base == NO_CHILD {
+    fn insert_by_push_out(&mut self, target_idx: usize, parent_idx: usize) -> Result<usize, PushOutErr> {
+        let parent = self.tree[parent_idx];
+        let target = self.tree[target_idx];
+
+        if target.check == NO_PARENT {
+            if target.base == NO_CHILD {
                 return Err(PushOutErr::Nop)
             }
-            // Root (cannot move)
             else {
                 return Err(PushOutErr::IsRoot)
             }
         }
-        // This stmt always succes because NO_PARENT condition was excluded in above stmt.
-        let parent_idx = self.tree[target_idx].check;
-        let row = self.read_row(parent_idx);
-        self.erase_row(parent_idx);
-        // insert dummy
-        self.tree[target_idx] = Node::term(0, 0);
-        // replace current row
-        let base = self.paste(row, [Node::blank(); 256], self.tree[parent_idx].base);
-        // fix parent's base
-        self.tree[parent_idx].base = base;
-        // put out dummy
-        self.tree[target_idx] = Node::blank();
-        return Ok(base)
-    }
-}
-#[cfg(test)]
-mod test_push_out {
-    use super::*;
-    #[test]
-    fn test_push_out () {
-        let mut tree = vec![Node::default(); 512];
-        tree[0] = Node::root(0);
-        tree[1] = Node::sec(0, 8, None);
-        tree[2] = Node::term(0, 0);
-        tree[8] = Node::term(1, 0);
-        let mut trie: Trie<String> = Trie {
-            tree,
-            storage: Vec::new(),
-        };
-        assert_eq!(trie.push_out(0), Err(PushOutErr::IsRoot));
-        assert_eq!(trie.push_out(3), Err(PushOutErr::Nop));
-        assert_eq!(trie.push_out(1), Ok(4));
-        let mut ans = vec![Node::default(); 512];
-        ans[0] = Node::root(4);
-        ans[5] = Node::sec(0, 8, None);
-        ans[6] = Node::term(0, 0);
-        ans[8] = Node::term(5, 0);
-        assert_eq!(decode(&trie.tree), decode(&ans));
-    }
-}
-
-impl<T> Trie<T> {
-    fn insert_by_push_out(&mut self, target_idx: usize, parent_idx: usize) -> Result<usize, PushOutErr> {
-        let parent = self.tree[parent_idx];
 
         let old_base = if parent.check < self.tree.len() {
             self.tree[parent.check].base
@@ -530,7 +486,14 @@ impl<T> Trie<T> {
         else {
             NO_CHILD
         };
-        let new_base = self.push_out(target_idx).unwrap();
+        let row = self.read_row(target.check);
+        self.erase_row(target.check);
+        // insert dummy
+        self.tree[target_idx] = Node::node(0, NO_CHILD, NO_ITEM);
+        // replace parent
+        let new_base = self.paste(row, [Node::blank(); 256], self.tree[target.check].base);
+        // update parent of target
+        self.tree[target.check].base = new_base;
         // if parent was included in target of push_out
         if parent != self.tree[parent_idx] {
             // old_base ^ parent_idx: relative position
