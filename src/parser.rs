@@ -14,37 +14,41 @@ pub struct Word<T> {
 
 
 #[allow(dead_code)]
-pub fn parse_naist_jdic_by_line<F, T>(cfg: &DictCfg, classifier: F, line: &str) -> Word<T>
+pub fn parse_line<F, T>(cfg: &DictCfg, classifier: F, line: &str) -> (Vec<u8>, Word<T>)
     where F: Fn(&[&str]) -> T
 {
     let arr: Vec<&str> = line.split(',').collect();
     let matrix_id: usize = arr[cfg.matrix_id].parse().unwrap();
     let gencost: i64 = arr[cfg.gencost].parse().unwrap();
-    let word : String = arr[cfg.word].to_string();
+    let word_str : String = arr[cfg.word].to_string();
     let info: T = classifier(&arr);
-    Word {
+    let word = Word {
         info,
-        word,
+        word: word_str.clone(),
         gencost,
         matrix_id,
-    }
+    };
+    let key = word_str.as_bytes().to_vec();
+    (key, word)
 }
 
 use std::io;
 use std::io::{BufRead, Read};
+use super::trie;
 
 #[allow(dead_code)]
-pub fn parse_csv_dict<R: Read, F, T>(readable: R, cfg: &DictCfg, classifier: F) -> Result<Vec<Word<T>>, io::Error>
+pub fn build_trie<R: Read, F, T>(readable: R, cfg: &DictCfg, classifier: F) -> Result<trie::Trie<Word<T>>, io::Error>
     where F: Fn(&[&str]) -> T
 {
     let mut reader = io::BufReader::new(readable);
     let mut buf = String::new();
-    let mut result = Vec::new();
+    let mut trie = trie::Trie::new();
     while reader.read_line(&mut buf)? > 0 {
-        result.push(parse_naist_jdic_by_line(&cfg, &classifier, &buf));
+        let (key, info) = parse_line(&cfg, &classifier, &buf);
+        trie.add(&key, info).unwrap();
         buf.clear();
     }
-    Ok(result)
+    Ok(trie)
 }
 
 #[cfg(test)]
@@ -58,27 +62,28 @@ mod test_parser {
             matrix_id: 1,
             gencost: 2,
         };
-        let result: Result<Vec<Word<String>>, _> =
-            parse_csv_dict(csv.as_bytes(), &cfg, |arr| arr[3].trim().to_string());
-        assert_eq!( result.unwrap(), vec![
-            Word {
+        let result: trie::Trie<Word<String>> =
+            build_trie(csv.as_bytes(), &cfg, |arr| arr[3].trim().to_string()).unwrap();
+        assert_eq!(result.find("蟹".as_bytes()),
+            Ok(&Word {
                 matrix_id: 0,
                 gencost: 100,
                 word: "蟹".to_string(),
                 info: "カニ".to_string(),
-            },
-            Word {
+            }));
+        assert_eq!(result.find("土".as_bytes()),
+            Ok(&Word {
                 matrix_id: 1,
                 gencost: 200,
                 word: "土".to_string(),
                 info: "ツチ".to_string(),
-            },
-            Word {
+            }));
+        assert_eq!(result.find("味".as_bytes()),
+            Ok(&Word {
                 matrix_id: 2,
                 gencost: 300,
                 word: "味".to_string(),
                 info: "アジ".to_string(),
-            },
-        ]);
+            }));
     }
 }

@@ -162,7 +162,7 @@ mod node_test {
     }
 }
 
-struct Trie<T> {
+pub struct Trie<T> {
     // 圧縮済みの遷移表
     tree: Vec<Node>,
     // 辞書本体
