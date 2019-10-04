@@ -1,7 +1,7 @@
 pub struct DictCfg {
-    matrix_id: usize,
-    word: usize,
-    gencost: usize,
+    pub matrix_id: usize,
+    pub word: usize,
+    pub gencost: usize,
 }
 
 #[derive(Debug, PartialEq)]
