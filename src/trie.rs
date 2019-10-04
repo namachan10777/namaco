@@ -606,4 +606,23 @@ mod test_add_find {
         assert_eq!(trie.find(&[1]), Err(()));
         assert_eq!(trie.find(&[7, 4]), Err(()));
     }
+
+    #[test]
+    fn test_add() {
+        let mut trie: Trie<String> = Trie::new();
+        trie.add("張り込め".as_bytes(), "張り込め".to_string()).unwrap();
+        trie.add("ニッカーボッカー".as_bytes(), "ニッカーボッカー".to_string()).unwrap();
+        trie.add("証城寺".as_bytes(), "証城寺".to_string()).unwrap();
+        trie.add("差し昇っ".as_bytes(), "差し登っ".to_string()).unwrap();
+        trie.add("抜け出せれ".as_bytes(), "抜け出せれ".to_string()).unwrap();
+        trie.add("たい".as_bytes(), "たい".to_string()).unwrap();
+        trie.add("アオガエル".as_bytes(), "アオガエル".to_string()).unwrap();
+        trie.add("長府浜浦".as_bytes(), "長府浜浦".to_string()).unwrap();
+        trie.add("中佃".as_bytes(), "中佃".to_string()).unwrap();
+        trie.add("幻視".as_bytes(), "幻視".to_string()).unwrap();
+        trie.add("小船木".as_bytes(), "小船木".to_string()).unwrap();
+        trie.add("浅黒かれ".as_bytes(), "浅黒かれ".to_string()).unwrap();
+        trie.add("扁かろ".as_bytes(), "扁かろ".to_string()).unwrap();
+        trie.add("咲き乱れ".as_bytes(), "咲き乱れ".to_string()).unwrap();
+    }
 }
