@@ -200,6 +200,62 @@ impl<T> Trie<T> {
         }
         Ok(here)
     }
+
+    fn pp(&self, indent: usize, parent_idx: usize) -> String {
+        let parent = self.tree[parent_idx];
+        let mut buf = String::new();
+        if parent.base != NO_CHILD {
+            for i in 0..256 {
+                let child_idx = i ^ parent.base;
+                if self.tree[child_idx].check == parent_idx {
+                    buf.push_str(&self.pp(indent+1, child_idx));
+                }
+            }
+        }
+        format!("{}{:?}\n{}", "  ".repeat(indent), Into::<DecodedNode>::into(parent), buf)
+    }
+
+    fn pp_dot_impl(&self, parent_digest: &str, current_idx: usize) -> String {
+        let mut buf = String::new();
+        let current = self.tree[current_idx];
+        if current.base != NO_CHILD {
+            for i in 0..256 {
+                let child_idx = current.base ^ i;
+                let child = self.tree[child_idx];
+                if child.check == current_idx {
+                    let mut sha256 = Sha256::new();
+                    let child_str = format!("{}:{:?}", child_idx, Into::<DecodedNode>::into(child));
+                    sha256.input(child_str.as_bytes());
+                    let digest = format!("node{}", sha256.result_str());
+                    buf.push_str(&format!("{} [label=\"{}\"];\n", &digest, child_str));
+                    buf.push_str(&format!("{} -> {} [label=\"{}\"];\n", parent_digest, &digest, i));
+                    buf.push_str(&self.pp_dot_impl(&digest, child_idx));
+                }
+            }
+        }
+        buf
+    }
+
+    fn pp_dot(&self) -> String {
+        let mut buf = String::new();
+        let root = self.tree[0];
+        for i in 0..256 {
+            let child_idx = root.base ^ i;
+            let child = self.tree[child_idx];
+            if child.check == 0 {
+                let mut sha256 = Sha256::new();
+                let child_str = format!("{}:{:?}", child_idx, Into::<DecodedNode>::into(child));
+                sha256.input(child_str.as_bytes());
+                let digest = format!("node{}", sha256.result_str());
+                buf.push_str(&format!("{} [label=\"{}\"];\n", &digest, child_str));
+                buf.push_str(&format!("root -> {} [label=\"{}\"];\n", &digest, i));
+                buf.push_str(&self.pp_dot_impl(&digest, child_idx));
+            }
+        }
+        format!("digraph trie {{\nroot [label=\"{:?}\"];\n{}}}",
+            Into::<DecodedNode>::into(self.tree[0]),
+            buf)
+    }
 }
 #[cfg(test)]
 mod test_explore { 
