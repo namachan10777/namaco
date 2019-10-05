@@ -204,20 +204,6 @@ impl<T> Trie<T> {
         Ok(here)
     }
 
-    fn pp(&self, indent: usize, parent_idx: usize) -> String {
-        let parent = self.tree[parent_idx];
-        let mut buf = String::new();
-        if parent.base != NO_CHILD {
-            for i in 0..256 {
-                let child_idx = i ^ parent.base;
-                if self.tree[child_idx].check == parent_idx {
-                    buf.push_str(&self.pp(indent+1, child_idx));
-                }
-            }
-        }
-        format!("{}{:?}\n{}", "  ".repeat(indent), Into::<DecodedNode>::into(parent), buf)
-    }
-
     fn pp_dot_impl(&self, parent_digest: &str, current_idx: usize) -> String {
         let mut buf = String::new();
         let current = self.tree[current_idx];
@@ -239,6 +225,7 @@ impl<T> Trie<T> {
         buf
     }
 
+    #[allow(dead_code)]
     fn pp_dot(&self) -> String {
         let mut buf = String::new();
         let root = self.tree[0];
