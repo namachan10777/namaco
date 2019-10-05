@@ -1,5 +1,8 @@
 // copyright (c) 2019 Nakano Masaki <namachan10777@gmail>
+extern crate crypto;
 use std::usize;
+use crypto::sha2::Sha256;
+use crypto::digest::Digest;
 
 #[derive(Clone, PartialEq, Debug, Copy)]
 struct Node {
@@ -544,6 +547,7 @@ impl<T> Trie<T> {
         };
         let row = self.read_row(target.check);
         self.erase_row(target.check);
+        let parent_moved = self.tree[parent_idx] == Node::blank();
         // insert dummy
         self.tree[target_idx] = Node::node(0, NO_CHILD, NO_ITEM);
         // replace parent
@@ -551,7 +555,8 @@ impl<T> Trie<T> {
         // update parent of target
         self.tree[target.check].base = new_base;
         // if parent was included in target of push_out
-        if parent != self.tree[parent_idx] {
+        // 親のcheckが変わっただけでもここの判定に入ってしまう
+        if parent_moved {
             // old_base ^ parent_idx: relative position
             // (old_base ^ parent_idx) ^ new_base: new absolute position
             // A ^ B = C ⇒ C ^ A = B ∩ C ^ B = A
@@ -680,5 +685,20 @@ mod test_add_find {
         trie.add("浅黒かれ".as_bytes(), "浅黒かれ".to_string()).unwrap();
         trie.add("扁かろ".as_bytes(), "扁かろ".to_string()).unwrap();
         trie.add("咲き乱れ".as_bytes(), "咲き乱れ".to_string()).unwrap();
+
+        assert_eq!(trie.find("張り込め".as_bytes()), Ok(&"張り込め".to_string()));
+        assert_eq!(trie.find("ニッカーボッカー".as_bytes()), Ok(&"ニッカーボッカー".to_string()));
+        assert_eq!(trie.find("証城寺".as_bytes()), Ok(&"証城寺".to_string()));
+        assert_eq!(trie.find("差し昇っ".as_bytes()), Ok(&"差し登っ".to_string()));
+        assert_eq!(trie.find("抜け出せれ".as_bytes()), Ok(&"抜け出せれ".to_string()));
+        assert_eq!(trie.find("たい".as_bytes()), Ok(&"たい".to_string()));
+        assert_eq!(trie.find("アオガエル".as_bytes()), Ok(&"アオガエル".to_string()));
+        assert_eq!(trie.find("長府浜浦".as_bytes()), Ok(&"長府浜浦".to_string()));
+        assert_eq!(trie.find("中佃".as_bytes()), Ok(&"中佃".to_string()));
+        assert_eq!(trie.find("幻視".as_bytes()), Ok(&"幻視".to_string()));
+        assert_eq!(trie.find("小船木".as_bytes()), Ok(&"小船木".to_string()));
+        assert_eq!(trie.find("浅黒かれ".as_bytes()), Ok(&"浅黒かれ".to_string()));
+        assert_eq!(trie.find("扁かろ".as_bytes()), Ok(&"扁かろ".to_string()));
+        assert_eq!(trie.find("咲き乱れ".as_bytes()), Ok(&"咲き乱れ".to_string()));
     }
 }
