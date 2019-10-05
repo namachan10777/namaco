@@ -35,12 +35,7 @@ jobs:
       run: cargo test --verbose
 
     - name: callgrind
-      run: |
-        sudo apt-get install -y valgrind
-        cargo build --release
-        nkf ./naist-jdic/naist-jdic.csv | nkf | shuf -n 200 > short.csv
-        valgrind --tool=callgrind --dump-instr=yes --collect-jumps=yes --simulate-cache=yes ./target/release/namaco
-        mv callgrind.out.* callgrind.out
+      run: sh ./profile.sh
 
     - uses: actions/upload-artifact@master
       with:
