@@ -6,6 +6,7 @@ edition = "2018"
 
 [dependencies]
 rust-crypto = "*"
+clap = "*"
 
 [profile.bench]
 debug = true
