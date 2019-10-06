@@ -62,21 +62,8 @@ pub fn parse_line<F, T>(cfg: &DictCfg, classifier: F, line: &str) -> (Vec<u8>, W
     where F: Fn(&[&str]) -> T
 {
     let arr: Vec<&str> = split_by_comma(line);
-    let matrix_id: usize = match arr[cfg.matrix_id].parse() {
-        Ok(id) => id,
-        Err(err) => {
-            println!("{}", line);
-            panic!(err);
-        }
-    };
-    let gencost: i64 = match arr[cfg.gencost].parse() {
-        Ok(id) => id,
-        Err(err) => {
-            println!("{}", line);
-            println!("{:?} -- {}", arr, cfg.gencost);
-            panic!(err);
-        }
-    };
+    let matrix_id: usize = arr[cfg.matrix_id].parse().unwrap();
+    let gencost: i64 = arr[cfg.gencost].parse().unwrap();
     let word_str : String = arr[cfg.word].to_string();
     let info: T = classifier(&arr);
     let word = Word {
