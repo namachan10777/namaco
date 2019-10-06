@@ -12,14 +12,71 @@ pub struct Word<T> {
     matrix_id: usize,
 }
 
+fn split_by_comma<'a>(line: &'a str) -> Vec<&'a str> {
+    let mut buf = Vec::new();
+    const COMMA: u8 = 0x2c;
+    const DQUOTE: u8 = 0x22;
+    let bytes = line.as_bytes();
+
+    let mut i = 0usize;
+    let mut begin = 0usize;
+
+    while i < bytes.len() {
+        if bytes[i] == DQUOTE && i + 3 < bytes.len() && bytes[i+2] == DQUOTE && bytes[i+3] == COMMA {
+            unsafe {
+                buf.push(line.get_unchecked(i+1..i+2));
+            }
+            i += 4;
+            begin = i;
+        }
+        else if bytes[i] == COMMA {
+            unsafe {
+                buf.push(line.get_unchecked(begin..i));
+            }
+            i += 1;
+            begin = i;
+        }
+        else {
+            i += 1;
+        }
+    }
+    unsafe {
+        buf.push(line.get_unchecked(begin..));
+    }
+
+    buf
+}
+#[cfg(test)]
+mod test_split_by_comma {
+    use super::*;
+    #[test]
+    fn test_split_by_comma() {
+        assert_eq!(split_by_comma("a,b,c"), vec!["a", "b", "c"]);
+        assert_eq!(split_by_comma(",a,b,,c,"), vec!["", "a", "b", "", "c", ""]);
+        assert_eq!(split_by_comma("\"\"\",\",\",a"), vec!["\"", ",", "a"]);
+    }
+}
 
 #[allow(dead_code)]
 pub fn parse_line<F, T>(cfg: &DictCfg, classifier: F, line: &str) -> (Vec<u8>, Word<T>)
     where F: Fn(&[&str]) -> T
 {
-    let arr: Vec<&str> = line.split(',').collect();
-    let matrix_id: usize = arr[cfg.matrix_id].parse().unwrap();
-    let gencost: i64 = arr[cfg.gencost].parse().unwrap();
+    let arr: Vec<&str> = split_by_comma(line);
+    let matrix_id: usize = match arr[cfg.matrix_id].parse() {
+        Ok(id) => id,
+        Err(err) => {
+            println!("{}", line);
+            panic!(err);
+        }
+    };
+    let gencost: i64 = match arr[cfg.gencost].parse() {
+        Ok(id) => id,
+        Err(err) => {
+            println!("{}", line);
+            println!("{:?} -- {}", arr, cfg.gencost);
+            panic!(err);
+        }
+    };
     let word_str : String = arr[cfg.word].to_string();
     let info: T = classifier(&arr);
     let word = Word {
