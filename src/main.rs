@@ -18,7 +18,7 @@ fn main() {
     let cfg = parser::DictCfg {
         word: 0,
         matrix_id: 2,
-        gencost: 4,
+        gencost: 3,
     };
     let _trie = parser::build_trie(&file, &cfg, |arr| arr[3].trim().to_string()).unwrap();
 }
