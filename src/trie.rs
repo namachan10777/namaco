@@ -166,6 +166,7 @@ mod node_test {
 }
 
 pub struct Trie<T> {
+    capacities: Vec<u8>,
     // 圧縮済みの遷移表
     tree: Vec<Node>,
     // 辞書本体
@@ -181,6 +182,7 @@ impl<T> Trie<T> {
         let mut tree = vec![Node::blank(); 256];
         tree[0] = Node::root(0);
         Trie {
+            capacities: vec![254],
             tree,
             storage: Vec::new(),
         }
@@ -267,6 +269,7 @@ mod test_explore {
         tree[7] = Node::sec(2, 4, Some(3));
         tree[5] = Node::term(7, 4);
         let trie = Trie {
+            capacities: vec![249, 255],
             tree,
             storage: Vec::new() as Vec<String>,
         };
@@ -283,32 +286,30 @@ mod test_explore {
 
 impl<T> Trie<T> {
     // To reallocate base and expand tree if need to do.
-    fn reallocate_base(&mut self, target: &[bool]) -> usize {
-        // search from existent area
-        for i in 0..self.tree.len() - 256 {
-            let mut safe = true;
-            for j in 0..256 {
-                safe &= !target[j] || DecodedNode::Blank == Into::<DecodedNode>::into(self.tree[i ^ j].clone());
-            }
-            if safe {
-                return i;
+    // FIXME bottleneck
+    fn reallocate_base(&mut self, target: &[bool], cnt: u8) -> usize {
+        for block_idx in 0..self.capacities.len() {
+            if self.capacities[block_idx] >= cnt {
+                for innser_offset in 0..256 {
+                    let mut safe = true;
+                    let offset = (block_idx << 8) | innser_offset;
+                    for target_idx in 0..256 {
+                        safe &=
+                            !target[target_idx]
+                            || DecodedNode::Blank == Into::<DecodedNode>::into(self.tree[offset ^ target_idx].clone());
+                    }
+                    if safe {
+                        return offset;
+                    }
+                }
             }
         }
         let half = self.tree.len();
         // expand tree
         self.tree.resize(half * 2, Node::blank());
+        self.capacities.resize(self.capacities.len() * 2, 255);
         // search base straddling border of allocated area.
-        for i in half-1..half + 255 {
-            let mut safe = true;
-            for j in 0..256 {
-                safe &= !target[j] || DecodedNode::Blank == Into::<DecodedNode>::into(self.tree[i ^ j].clone());
-            }
-            if safe {
-                return i;
-            }
-        }
-        // definitely free
-        half + 256
+        half
     }
 }
 
@@ -322,32 +323,36 @@ mod test_reallocate_base {
         let mut tree = vec![Node::term(0, 0); 512];
         tree[6] = Node::blank();
         let mut trie: Trie<String> = Trie {
+            capacities: vec![1, 0],
             tree,
             storage: Vec::new(),
         };
-        assert_eq!(trie.reallocate_base(&mask), 0^6);
+        assert_eq!(trie.reallocate_base(&mask, 1), 0^6);
 
         mask[0] = false;
         mask[47] = true;
-        assert_eq!(trie.reallocate_base(&mask), 6^47);
+        assert_eq!(trie.reallocate_base(&mask, 1), 6^47);
 
         mask[47] = true;
         mask[99] = true;
         trie.tree = vec![Node::blank(); 512];
         trie.tree[47] = Node::term(0, 0);
         trie.tree[1^99] = Node::term(0, 0);
-        assert_eq!(trie.reallocate_base(&mask), 2);
+        trie.capacities = vec![253, 255];
+        assert_eq!(trie.reallocate_base(&mask, 2), 2);
 
         mask[47] = false;
         mask[99] = false;
         mask[0] = true;
         trie.tree = vec![Node::term(0, 0); 512];
         trie.tree[511] = Node::blank();
-        assert_eq!(trie.reallocate_base(&mask), 511);
-        assert_eq!(trie.tree.len(), 1024);
+        trie.capacities = vec![0, 1];
+        assert_eq!(trie.reallocate_base(&mask, 1), 511);
+        assert_eq!(trie.tree.len(), 512);
 
         trie.tree = vec![Node::term(0, 0); 512];
-        assert_eq!(trie.reallocate_base(&mask), 512);
+        trie.capacities = vec![0, 0];
+        assert_eq!(trie.reallocate_base(&mask, 1), 512);
         assert_eq!(trie.tree.len(), 1024);
     }
 }
@@ -385,6 +390,7 @@ mod test_read_erase_row {
         tree[2] = Node::term(0, 0);
         tree[64] = Node::term(1, 0);
         let trie: Trie<String> = Trie {
+            capacities: vec![251, 255],
             tree,
             storage: Vec::new(),
         };
@@ -409,6 +415,7 @@ mod test_read_erase_row {
         tree[2] = Node::term(0, 0);
         tree[64] = Node::term(1, 0);
         let mut trie: Trie<String> = Trie {
+            capacities: vec![251, 255],
             tree,
             storage: Vec::new(),
         };
@@ -427,13 +434,18 @@ impl<T> Trie<T> {
     fn paste(&mut self, row: Row, addition: Row, from: usize) -> usize {
         // make mask
         let mut mask = [false; 256];
+        let mut cnt = 0;
         for i in 0..256 {
-            mask[i] = row[i].check != NO_PARENT
+            if row[i].check != NO_PARENT
                 || row[i].base != NO_CHILD
                 || addition[i].check != NO_PARENT
-                || addition[i].base != NO_CHILD;
+                || addition[i].base != NO_CHILD {
+                mask[i] = true;
+                cnt += 1;
+            }
         }
-        let to = self.reallocate_base(&mask);
+        let to = self.reallocate_base(&mask, cnt);
+        self.capacities[to >> 8] -= cnt;
         // place
         for i in 0..256 {
             if row[i].check != NO_PARENT {
@@ -477,6 +489,7 @@ mod test_paste {
         row[2] = Node::term(1, 0);
 
         let mut trie: Trie<String> = Trie {
+            capacities: vec![253, 255],
             tree,
             storage: Vec::new(),
         };
@@ -493,6 +506,7 @@ mod test_paste {
         let mut tree2 = vec![Node::blank(); 512];
         tree2[0] = Node::root(0);
         let mut trie2: Trie<String> = Trie {
+            capacities: vec![251, 255],
             tree: tree2,
             storage: Vec::new(),
         };

@@ -9,5 +9,6 @@ rust-crypto = "*"
 
 [profile.bench]
 debug = true
+# for debugging
 [profile.release]
 debug = true
