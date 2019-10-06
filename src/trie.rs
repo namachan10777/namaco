@@ -377,6 +377,17 @@ impl<T> Trie<T> {
             }
         }
     }
+
+    fn count_children(&self, parent_idx: usize) -> usize {
+        let mut cnt = 0usize;
+        let base = self.tree[parent_idx].base;
+        for i in 0..256 {
+            if self.tree[base ^ i].check == parent_idx {
+                cnt += 1;
+            }
+        }
+        cnt
+    }
 }
 
 #[cfg(test)]
@@ -607,7 +618,15 @@ impl<T> Trie<T> {
                 }
                 // conflict case
                 else {
-                    parent_idx = self.insert_by_push_out(child_idx, parent_idx).unwrap();
+                    let brother_num  = self.count_children(parent_idx);
+                    let stranger_num = self.count_children(child.check);
+                    parent_idx =
+                        if brother_num > stranger_num {
+                            self.insert_by_push_out(child_idx, parent_idx).unwrap()
+                        }
+                        else {
+                            self.insert_by_slide_brothers(child_idx, parent_idx).unwrap()
+                        };
                 }
             }
         }
