@@ -71,28 +71,28 @@ mod test_morph {
         let restored = Morph::import(&mut Cursor::new(bytes)).unwrap();
         assert_eq!(
             restored.trie.find("蟹".as_bytes()),
-            Ok(&Word {
+            Ok(&[Word {
                 matrix_id: 0,
                 gencost: 100,
                 word: "蟹".to_string(),
                 info: "カニ".to_string(),
-            }));
+            }][..]));
         assert_eq!(
             restored.trie.find("土".as_bytes()),
-            Ok(&Word {
+            Ok(&[Word {
                 matrix_id: 1,
                 gencost: 200,
                 word: "土".to_string(),
                 info: "ツチ".to_string(),
-            }));
+            }][..]));
         assert_eq!(
             restored.trie.find("味".as_bytes()),
-            Ok(&Word {
+            Ok(&[Word {
                 matrix_id: 2,
                 gencost: 300,
                 word: "味".to_string(),
                 info: "アジ".to_string(),
-            }));
+            }][..]));
         assert_eq!(restored.matrix.at(0, 1), 121);
         assert_eq!(restored.matrix.at(2, 1), -54);
     }

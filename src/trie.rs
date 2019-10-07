@@ -172,7 +172,7 @@ pub struct Trie<T: Serialize> {
     // 圧縮済みの遷移表
     tree: Vec<Node>,
     // 辞書本体
-    storage: Vec<T>,
+    storage: Vec<Vec<T>>,
 }
 
 const ROW_LEN: usize = 256;
@@ -273,7 +273,7 @@ mod test_explore {
         let trie = Trie {
             capacities: vec![249, 255],
             tree,
-            storage: Vec::new() as Vec<String>,
+            storage: Vec::new() as Vec<Vec<String>>,
         };
         assert_eq!(trie.explore(&[1]), Ok(1));
         assert_eq!(trie.explore(&[2]), Ok(2));
@@ -633,23 +633,29 @@ impl<T: Serialize> Trie<T> {
                 }
             }
         }
-        let cargo_id = self.storage.len();
-        self.storage.push(cargo);
-        self.tree[parent_idx].id = cargo_id;
+        self.tree[parent_idx].id =
+            if self.tree[parent_idx].id == NO_ITEM {
+                self.storage.push(vec![cargo]);
+                self.storage.len() - 1
+            }
+            else {
+                self.storage[self.tree[parent_idx].id].push(cargo);
+                self.tree[parent_idx].id
+            };
         Ok(())
     }
 }
 
 impl<T: Serialize> Trie<T> {
     #[allow(dead_code)]
-    pub fn find(&self, way: &[u8]) -> Result<&T, ()> {
+    pub fn find(&self, way: &[u8]) -> Result<&[T], ()> {
         match self.explore(way) {
             Ok(idx) => {
                 match Into::<DecodedNode>::into(self.tree[idx]) {
                     DecodedNode::Blank => Err(()),
                     DecodedNode::Root(_) => Err(()),
-                    DecodedNode::Term(_, id) => Ok(&self.storage[id]),
-                    DecodedNode::Sec(_, _, Some(id)) => Ok(&self.storage[id]),
+                    DecodedNode::Term(_, id) => Ok(&self.storage[id][..]),
+                    DecodedNode::Sec(_, _, Some(id)) => Ok(&self.storage[id][..]),
                     DecodedNode::Sec(_, _, None) => Err(()),
                 }
             },
@@ -676,17 +682,17 @@ mod test_add_find {
         trie.add(&[0, 1], "01".to_string()).unwrap();
         trie.add(&[2, 0], "20".to_string()).unwrap();
 
-        assert_eq!(trie.find(&[0]), Ok(&"0".to_string()));
-        assert_eq!(trie.find(&[0]), Ok(&"0".to_string()));
-        assert_eq!(trie.find(&[0, 0]), Ok(&"00".to_string()));
-        assert_eq!(trie.find(&[1, 2, 3]), Ok(&"123".to_string()));
-        assert_eq!(trie.find(&[1, 2]), Ok(&"12".to_string()));
-        assert_eq!(trie.find(&[1, 2, 0]), Ok(&"120".to_string()));
-        assert_eq!(trie.find(&[3, 1, 3]), Ok(&"313".to_string()));
-        assert_eq!(trie.find(&[1, 6, 1]), Ok(&"161".to_string()));
-        assert_eq!(trie.find(&[0, 1]), Ok(&"01".to_string()));
-        assert_eq!(trie.find(&[2, 0]), Ok(&"20".to_string()));
-        assert_eq!(trie.find(&[2, 1]), Ok(&"21".to_string()));
+        assert_eq!(trie.find(&[0]), Ok(&["0".to_string()][..]));
+        assert_eq!(trie.find(&[0]), Ok(&["0".to_string()][..]));
+        assert_eq!(trie.find(&[0, 0]), Ok(&["00".to_string()][..]));
+        assert_eq!(trie.find(&[1, 2, 3]), Ok(&["123".to_string()][..]));
+        assert_eq!(trie.find(&[1, 2]), Ok(&["12".to_string()][..]));
+        assert_eq!(trie.find(&[1, 2, 0]), Ok(&["120".to_string()][..]));
+        assert_eq!(trie.find(&[3, 1, 3]), Ok(&["313".to_string()][..]));
+        assert_eq!(trie.find(&[1, 6, 1]), Ok(&["161".to_string()][..]));
+        assert_eq!(trie.find(&[0, 1]), Ok(&["01".to_string()][..]));
+        assert_eq!(trie.find(&[2, 0]), Ok(&["20".to_string()][..]));
+        assert_eq!(trie.find(&[2, 1]), Ok(&["21".to_string()][..]));
         assert_eq!(trie.find(&[1]), Err(()));
         assert_eq!(trie.find(&[7, 4]), Err(()));
     }
@@ -709,19 +715,19 @@ mod test_add_find {
         trie.add("扁かろ".as_bytes(), "扁かろ".to_string()).unwrap();
         trie.add("咲き乱れ".as_bytes(), "咲き乱れ".to_string()).unwrap();
 
-        assert_eq!(trie.find("張り込め".as_bytes()), Ok(&"張り込め".to_string()));
-        assert_eq!(trie.find("ニッカーボッカー".as_bytes()), Ok(&"ニッカーボッカー".to_string()));
-        assert_eq!(trie.find("証城寺".as_bytes()), Ok(&"証城寺".to_string()));
-        assert_eq!(trie.find("差し昇っ".as_bytes()), Ok(&"差し登っ".to_string()));
-        assert_eq!(trie.find("抜け出せれ".as_bytes()), Ok(&"抜け出せれ".to_string()));
-        assert_eq!(trie.find("たい".as_bytes()), Ok(&"たい".to_string()));
-        assert_eq!(trie.find("アオガエル".as_bytes()), Ok(&"アオガエル".to_string()));
-        assert_eq!(trie.find("長府浜浦".as_bytes()), Ok(&"長府浜浦".to_string()));
-        assert_eq!(trie.find("中佃".as_bytes()), Ok(&"中佃".to_string()));
-        assert_eq!(trie.find("幻視".as_bytes()), Ok(&"幻視".to_string()));
-        assert_eq!(trie.find("小船木".as_bytes()), Ok(&"小船木".to_string()));
-        assert_eq!(trie.find("浅黒かれ".as_bytes()), Ok(&"浅黒かれ".to_string()));
-        assert_eq!(trie.find("扁かろ".as_bytes()), Ok(&"扁かろ".to_string()));
-        assert_eq!(trie.find("咲き乱れ".as_bytes()), Ok(&"咲き乱れ".to_string()));
+        assert_eq!(trie.find("張り込め".as_bytes()), Ok(&["張り込め".to_string()][..]));
+        assert_eq!(trie.find("ニッカーボッカー".as_bytes()), Ok(&["ニッカーボッカー".to_string()][..]));
+        assert_eq!(trie.find("証城寺".as_bytes()), Ok(&["証城寺".to_string()][..]));
+        assert_eq!(trie.find("差し昇っ".as_bytes()), Ok(&["差し登っ".to_string()][..]));
+        assert_eq!(trie.find("抜け出せれ".as_bytes()), Ok(&["抜け出せれ".to_string()][..]));
+        assert_eq!(trie.find("たい".as_bytes()), Ok(&["たい".to_string()][..]));
+        assert_eq!(trie.find("アオガエル".as_bytes()), Ok(&["アオガエル".to_string()][..]));
+        assert_eq!(trie.find("長府浜浦".as_bytes()), Ok(&["長府浜浦".to_string()][..]));
+        assert_eq!(trie.find("中佃".as_bytes()), Ok(&["中佃".to_string()][..]));
+        assert_eq!(trie.find("幻視".as_bytes()), Ok(&["幻視".to_string()][..]));
+        assert_eq!(trie.find("小船木".as_bytes()), Ok(&["小船木".to_string()][..]));
+        assert_eq!(trie.find("浅黒かれ".as_bytes()), Ok(&["浅黒かれ".to_string()][..]));
+        assert_eq!(trie.find("扁かろ".as_bytes()), Ok(&["扁かろ".to_string()][..]));
+        assert_eq!(trie.find("咲き乱れ".as_bytes()), Ok(&["咲き乱れ".to_string()][..]));
     }
 }
