@@ -293,10 +293,11 @@ impl<T> Trie<T> {
                 for innser_offset in 0..256 {
                     let mut safe = true;
                     let offset = (block_idx << 8) | innser_offset;
-                    for target_idx in 0..256 {
-                        safe &=
-                            !target[target_idx]
-                            || DecodedNode::Blank == Into::<DecodedNode>::into(self.tree[offset ^ target_idx].clone());
+                    for target_idx in 0..256 {   
+                        if target[target_idx] && DecodedNode::Blank != Into::<DecodedNode>::into(self.tree[offset ^ target_idx].clone()) {
+                            safe = false; 
+                            break;                   
+                        }
                     }
                     if safe {
                         return offset;
