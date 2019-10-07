@@ -12,40 +12,33 @@ jobs:
     - name: apt
       run: |
         sudo apt-get update
+        sudo apt-get install -y valgrind nkf
 
-    - name: Test
+    - uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+        override: true
+    - name: test for stable
       run: cargo test --verbose
 
-    - name: Callgrind
-      run: |
-        sudo apt-get install -y valgrind
-        cargo build --release
-        valgrind --tool=callgrind --dump-instr=yes --collect-jumps=yes --simulate-cache=yes ./target/release/namaco
-        mv callgrind.out.* callgrind.out
+    - uses: actions-rs/toolchain@v1
+      with:
+        toolchain: beta 
+        override: true
+    - name: test for beta 
+      run: cargo test --verbose
+
+    - uses: actions-rs/toolchain@v1
+      with:
+        toolchain: nightly 
+        override: true
+    - name: test for nightly 
+      run: cargo test --verbose
+
+    - name: callgrind
+      run: sh ./profile.sh
 
     - uses: actions/upload-artifact@master
       with:
         name: callgrind.out
         path: callgrind.out
-
-    - name: Coverage
-      run: |
-        sudo apt-get install -y libcurl4-openssl-dev libelf-dev libdw-dev cmake gcc binutils-dev libiberty-dev
-        env RUSTFLAGS="-C link-dead-code" cargo test --no-run
-        wget https://github.com/SimonKagstrom/kcov/archive/master.tar.gz
-        tar xzf master.tar.gz
-        cd kcov-master
-        mkdir build
-        cd build
-        cmake ..
-        make
-        sudo make install DESTDIR=../../kcov-build
-        cd ../..
-        rm -rf kcov-master
-        gcc --version
-        for file in target/debug/namaco-*[^\.d]; do \
-          mkdir -p "target/cov/$(basename $file)"; \
-          ./kcov-build/usr/local/bin/kcov --exclude-pattern=/.cargo,/usr/lib --verify "target/cov/$(basename $file)" "$file"; \
-        done
-        bash <(curl -s https://codecov.io/bash) ${{ secrets.CODECOV_TOKEN }}
-        echo "Uploaded code coverage"

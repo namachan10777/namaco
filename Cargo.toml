@@ -5,8 +5,11 @@ authors = ["namachan10777 <namachan10777@gmail.com>"]
 edition = "2018"
 
 [dependencies]
+rust-crypto = "*"
+clap = "*"
 
 [profile.bench]
 debug = true
+# for debugging
 [profile.release]
 debug = true

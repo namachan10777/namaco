@@ -1,5 +1,8 @@
 // copyright (c) 2019 Nakano Masaki <namachan10777@gmail>
+extern crate crypto;
 use std::usize;
+use crypto::sha2::Sha256;
+use crypto::digest::Digest;
 
 #[derive(Clone, PartialEq, Debug, Copy)]
 struct Node {
@@ -24,8 +27,17 @@ impl Node {
     }
 
     
+    #[allow(dead_code)] // used in test
     fn sec(check: usize, base: usize, id: Option<usize>) -> Self {
         Node::from(DecodedNode::Sec(check, base, id))
+    }
+
+    fn node(check: usize, base: usize, id: usize) -> Self {
+        Node {
+            check,
+            base,
+            id,
+        }
     }
 
     fn blank() -> Self {
@@ -49,7 +61,6 @@ impl Default for DecodedNode {
     }
 }
 
-const MASK: usize = 0x7fffffffffffffff;
 const NO_PARENT: usize = usize::MAX;
 const NO_ITEM: usize = usize::MAX;
 const NO_CHILD: usize = usize::MAX;
@@ -72,7 +83,7 @@ impl Into<DecodedNode> for Node {
                 DecodedNode::Sec(self.check, self.base, None)
             }
             else {
-                DecodedNode::Sec(self.check, self.base, Some(self.id & MASK))
+                DecodedNode::Sec(self.check, self.base, Some(self.id))
             }
         }
     }
@@ -154,7 +165,8 @@ mod node_test {
     }
 }
 
-struct Trie<T> {
+pub struct Trie<T> {
+    capacities: Vec<u8>,
     // 圧縮済みの遷移表
     tree: Vec<Node>,
     // 辞書本体
@@ -170,6 +182,7 @@ impl<T> Trie<T> {
         let mut tree = vec![Node::blank(); 256];
         tree[0] = Node::root(0);
         Trie {
+            capacities: vec![254],
             tree,
             storage: Vec::new(),
         }
@@ -192,6 +205,49 @@ impl<T> Trie<T> {
         }
         Ok(here)
     }
+
+    fn pp_dot_impl(&self, parent_digest: &str, current_idx: usize) -> String {
+        let mut buf = String::new();
+        let current = self.tree[current_idx];
+        if current.base != NO_CHILD {
+            for i in 0..256 {
+                let child_idx = current.base ^ i;
+                let child = self.tree[child_idx];
+                if child.check == current_idx {
+                    let mut sha256 = Sha256::new();
+                    let child_str = format!("{}:{:?}", child_idx, Into::<DecodedNode>::into(child));
+                    sha256.input(child_str.as_bytes());
+                    let digest = format!("node{}", sha256.result_str());
+                    buf.push_str(&format!("{} [label=\"{}\"];\n", &digest, child_str));
+                    buf.push_str(&format!("{} -> {} [label=\"{}\"];\n", parent_digest, &digest, i));
+                    buf.push_str(&self.pp_dot_impl(&digest, child_idx));
+                }
+            }
+        }
+        buf
+    }
+
+    #[allow(dead_code)]
+    fn pp_dot(&self) -> String {
+        let mut buf = String::new();
+        let root = self.tree[0];
+        for i in 0..256 {
+            let child_idx = root.base ^ i;
+            let child = self.tree[child_idx];
+            if child.check == 0 {
+                let mut sha256 = Sha256::new();
+                let child_str = format!("{}:{:?}", child_idx, Into::<DecodedNode>::into(child));
+                sha256.input(child_str.as_bytes());
+                let digest = format!("node{}", sha256.result_str());
+                buf.push_str(&format!("{} [label=\"{}\"];\n", &digest, child_str));
+                buf.push_str(&format!("root -> {} [label=\"{}\"];\n", &digest, i));
+                buf.push_str(&self.pp_dot_impl(&digest, child_idx));
+            }
+        }
+        format!("digraph trie {{\nroot [label=\"{:?}\"];\n{}}}",
+            Into::<DecodedNode>::into(self.tree[0]),
+            buf)
+    }
 }
 #[cfg(test)]
 mod test_explore { 
@@ -213,6 +269,7 @@ mod test_explore {
         tree[7] = Node::sec(2, 4, Some(3));
         tree[5] = Node::term(7, 4);
         let trie = Trie {
+            capacities: vec![249, 255],
             tree,
             storage: Vec::new() as Vec<String>,
         };
@@ -227,59 +284,33 @@ mod test_explore {
     }
 }
 
-fn row2mask(row: Row) -> [bool;256] {
-    let mut mask = [false; 256];
-    for i in 0..256 {
-        mask[i] = match Into::<DecodedNode>::into(row[i]) {
-            DecodedNode::Term(_, _) => true,
-            DecodedNode::Root(_) => true,
-            DecodedNode::Sec(_, _, _) => true,
-            DecodedNode::Blank => false,
-        }
-    }
-    mask
-}
-#[cfg(test)]
-mod test_row2mask {
-    use super::*;
-    #[test]
-    fn test_row2mask() {
-        let mut row = [Node::blank(); 256];
-        row[2] = Node::term(0, 0);
-        row[9] = Node::sec(0, 0, None);
-        row[200] = Node::root(0);
-        row[222] = Node::from(DecodedNode::Blank);
-        let mut mask = [false; 256];
-        mask[2] = true;
-        mask[9] = true;
-        mask[200] = true;
-        assert_eq!(row2mask(row).to_vec(), mask.to_vec());
-    }
-}
-
 impl<T> Trie<T> {
-    fn reallocate_base(&mut self, target: &[bool]) -> usize {
-        for i in 0..self.tree.len() - 256 {
-            let mut safe = true;
-            for j in 0..256 {
-                safe &= !target[j] || DecodedNode::Blank == Into::<DecodedNode>::into(self.tree[i ^ j].clone());
-            }
-            if safe {
-                return i;
+    // To reallocate base and expand tree if need to do.
+    // FIXME bottleneck
+    fn reallocate_base(&mut self, target: &[bool], cnt: u8) -> usize {
+        for block_idx in 0..self.capacities.len() {
+            if self.capacities[block_idx] >= cnt {
+                for innser_offset in 0..256 {
+                    let mut safe = true;
+                    let offset = (block_idx << 8) | innser_offset;
+                    for target_idx in 0..256 {   
+                        if target[target_idx] && DecodedNode::Blank != Into::<DecodedNode>::into(self.tree[offset ^ target_idx].clone()) {
+                            safe = false; 
+                            break;                   
+                        }
+                    }
+                    if safe {
+                        return offset;
+                    }
+                }
             }
         }
         let half = self.tree.len();
+        // expand tree
         self.tree.resize(half * 2, Node::blank());
-        for i in half-1..half + 255 {
-            let mut safe = true;
-            for j in 0..256 {
-                safe &= !target[j] || DecodedNode::Blank == Into::<DecodedNode>::into(self.tree[i ^ j].clone());
-            }
-            if safe {
-                return i;
-            }
-        }
-        half + 256
+        self.capacities.resize(self.capacities.len() * 2, 255);
+        // search base straddling border of allocated area.
+        half
     }
 }
 
@@ -293,32 +324,36 @@ mod test_reallocate_base {
         let mut tree = vec![Node::term(0, 0); 512];
         tree[6] = Node::blank();
         let mut trie: Trie<String> = Trie {
+            capacities: vec![1, 0],
             tree,
             storage: Vec::new(),
         };
-        assert_eq!(trie.reallocate_base(&mask), 0^6);
+        assert_eq!(trie.reallocate_base(&mask, 1), 0^6);
 
         mask[0] = false;
         mask[47] = true;
-        assert_eq!(trie.reallocate_base(&mask), 6^47);
+        assert_eq!(trie.reallocate_base(&mask, 1), 6^47);
 
         mask[47] = true;
         mask[99] = true;
         trie.tree = vec![Node::blank(); 512];
         trie.tree[47] = Node::term(0, 0);
         trie.tree[1^99] = Node::term(0, 0);
-        assert_eq!(trie.reallocate_base(&mask), 2);
+        trie.capacities = vec![253, 255];
+        assert_eq!(trie.reallocate_base(&mask, 2), 2);
 
         mask[47] = false;
         mask[99] = false;
         mask[0] = true;
         trie.tree = vec![Node::term(0, 0); 512];
         trie.tree[511] = Node::blank();
-        assert_eq!(trie.reallocate_base(&mask), 511);
-        assert_eq!(trie.tree.len(), 1024);
+        trie.capacities = vec![0, 1];
+        assert_eq!(trie.reallocate_base(&mask, 1), 511);
+        assert_eq!(trie.tree.len(), 512);
 
         trie.tree = vec![Node::term(0, 0); 512];
-        assert_eq!(trie.reallocate_base(&mask), 512);
+        trie.capacities = vec![0, 0];
+        assert_eq!(trie.reallocate_base(&mask, 1), 512);
         assert_eq!(trie.tree.len(), 1024);
     }
 }
@@ -343,6 +378,17 @@ impl<T> Trie<T> {
             }
         }
     }
+
+    fn count_children(&self, parent_idx: usize) -> usize {
+        let mut cnt = 0usize;
+        let base = self.tree[parent_idx].base;
+        for i in 0..256 {
+            if self.tree[base ^ i].check == parent_idx {
+                cnt += 1;
+            }
+        }
+        cnt
+    }
 }
 
 #[cfg(test)]
@@ -356,6 +402,7 @@ mod test_read_erase_row {
         tree[2] = Node::term(0, 0);
         tree[64] = Node::term(1, 0);
         let trie: Trie<String> = Trie {
+            capacities: vec![251, 255],
             tree,
             storage: Vec::new(),
         };
@@ -380,6 +427,7 @@ mod test_read_erase_row {
         tree[2] = Node::term(0, 0);
         tree[64] = Node::term(1, 0);
         let mut trie: Trie<String> = Trie {
+            capacities: vec![251, 255],
             tree,
             storage: Vec::new(),
         };
@@ -393,20 +441,29 @@ mod test_read_erase_row {
 }
 
 impl<T> Trie<T> {
-    // This function forcely overrides tree
+    // This function forcely overwrite tree
     // 存在しなかったのにrowに入っているとfromを誤認する
     fn paste(&mut self, row: Row, addition: Row, from: usize) -> usize {
+        // make mask
         let mut mask = [false; 256];
+        let mut cnt = 0;
         for i in 0..256 {
-            mask[i] = row[i].check != NO_PARENT
+            if row[i].check != NO_PARENT
                 || row[i].base != NO_CHILD
                 || addition[i].check != NO_PARENT
-                || addition[i].base != NO_CHILD;
+                || addition[i].base != NO_CHILD {
+                mask[i] = true;
+                cnt += 1;
+            }
         }
-        let to = self.reallocate_base(&mask);
+        let to = self.reallocate_base(&mask, cnt);
+        self.capacities[to >> 8] -= cnt;
+        // place
         for i in 0..256 {
             if row[i].check != NO_PARENT {
+                // place bro
                 self.tree[to ^ i] = row[i];
+                // update children's check
                 for j in 0..256 {
                     if row[i].base != NO_CHILD && self.tree[row[i].base ^ j].check == from ^ i {
                         self.tree[row[i].base ^ j].check = to ^ i;
@@ -414,6 +471,7 @@ impl<T> Trie<T> {
                 }
             }
         }
+        // additional placement without updation of children's check
         for i in 0..256 {
             if addition[i].check != NO_PARENT || addition[i].base != NO_CHILD {
                 self.tree[to ^ i] = addition[i];
@@ -424,7 +482,7 @@ impl<T> Trie<T> {
 }
 
 #[allow(dead_code)]
-fn decode(x: Vec<Node>) -> Vec<DecodedNode> {
+fn decode(x: &Vec<Node>) -> Vec<DecodedNode> {
     x.iter().map(|x| Into::<DecodedNode>::into(x.clone())).collect()
 }
 
@@ -443,6 +501,7 @@ mod test_paste {
         row[2] = Node::term(1, 0);
 
         let mut trie: Trie<String> = Trie {
+            capacities: vec![253, 255],
             tree,
             storage: Vec::new(),
         };
@@ -459,6 +518,7 @@ mod test_paste {
         let mut tree2 = vec![Node::blank(); 512];
         tree2[0] = Node::root(0);
         let mut trie2: Trie<String> = Trie {
+            capacities: vec![251, 255],
             tree: tree2,
             storage: Vec::new(),
         };
@@ -468,52 +528,68 @@ mod test_paste {
         let mut ans = vec![Node::blank(); 512];
         ans[0] = Node::root(0);
         ans[1] = Node::sec(0, 0, None);
-        assert_eq!(decode(trie2.tree), decode(ans));
+        assert_eq!(decode(&trie2.tree), decode(&ans));
     }
 }
 
+#[derive(Debug, PartialEq)]
+enum PushOutErr {
+    Nop,
+    IsRoot,
+}
+
 impl<T> Trie<T> {
-    fn push_put(&mut self, target_idx: usize) -> Result<(), ()> {
-        if self.tree[target_idx].check == NO_PARENT {
-            if self.tree[target_idx].base == NO_CHILD {
-                return Ok(())
+    fn insert_by_push_out(&mut self, target_idx: usize, parent_idx: usize) -> Result<usize, PushOutErr> {
+        let parent = self.tree[parent_idx];
+        let target = self.tree[target_idx];
+
+        if target.check == NO_PARENT {
+            if target.base == NO_CHILD {
+                return Err(PushOutErr::Nop)
             }
             else {
-                return Err(())
+                return Err(PushOutErr::IsRoot)
             }
         }
-        let parent_idx = self.tree[target_idx].check;
+
+        let old_base = if parent.check < self.tree.len() {
+            self.tree[parent.check].base
+        }
+        else {
+            NO_CHILD
+        };
+        let row = self.read_row(target.check);
+        self.erase_row(target.check);
+        let parent_moved = self.tree[parent_idx] == Node::blank();
+        // insert dummy
+        self.tree[target_idx] = Node::node(0, NO_CHILD, NO_ITEM);
+        // replace parent
+        let new_base = self.paste(row, [Node::blank(); 256], self.tree[target.check].base);
+        // update parent of target
+        self.tree[target.check].base = new_base;
+        // if parent was included in target of push_out
+        // 親のcheckが変わっただけでもここの判定に入ってしまう
+        if parent_moved {
+            // old_base ^ parent_idx: relative position
+            // (old_base ^ parent_idx) ^ new_base: new absolute position
+            // A ^ B = C ⇒ C ^ A = B ∩ C ^ B = A
+            self.tree[target_idx] = Node::term(old_base ^ parent_idx ^ new_base, NO_ITEM);
+        }
+        else {
+            self.tree[target_idx] = Node::term(parent_idx, NO_ITEM);
+        }
+        Ok(target_idx)
+    }
+
+    fn insert_by_slide_brothers(&mut self, target_idx: usize, parent_idx: usize) -> Result<usize, ()> {
+        let parent = self.tree[parent_idx];
         let row = self.read_row(parent_idx);
         self.erase_row(parent_idx);
-        self.tree[target_idx] = Node::term(0, 0);
-        let base = self.reallocate_base(&row2mask(row));
-        self.paste(row, [Node::blank(); 256], self.tree[parent_idx].base);
-        self.tree[parent_idx].base = base;
-        self.tree[target_idx] = Node::blank();
-        return Ok(())
-    }
-}
-#[cfg(test)]
-mod test_push_out {
-    use super::*;
-    #[test]
-    fn test_push_out () {
-        let mut tree = vec![Node::default(); 512];
-        tree[0] = Node::root(0);
-        tree[1] = Node::sec(0, 8, None);
-        tree[2] = Node::term(0, 0);
-        tree[8] = Node::term(1, 0);
-        let mut trie: Trie<String> = Trie {
-            tree,
-            storage: Vec::new(),
-        };
-        trie.push_put(1).unwrap();
-        let mut ans = vec![Node::default(); 512];
-        ans[0] = Node::root(4);
-        ans[5] = Node::sec(0, 8, None);
-        ans[6] = Node::term(0, 0);
-        ans[8] = Node::term(5, 0);
-        assert_eq!(decode(trie.tree), decode(ans));
+        let mut addition = [Node::blank(); 256];
+        addition[parent.base ^ target_idx] = Node::node(parent_idx, NO_CHILD, NO_ITEM);
+        let new_base = self.paste(row, addition, parent.base);
+        self.tree[parent_idx].base = new_base;
+        Ok(target_idx ^ parent.base ^ new_base)
     }
 }
 
@@ -521,72 +597,48 @@ impl<T> Trie<T> {
     #[allow(dead_code)]
     pub fn add(&mut self, way: &[u8], cargo: T) -> Result<(), ()> {
         let mut parent_idx = 0;
-        let mut extended = false;
         for octet in way {
+            if self.tree[parent_idx].base == NO_CHILD {
+                self.tree[parent_idx].base = 0;
+            }
             let child_idx = self.tree[parent_idx].base ^ (*octet as usize);
-            match Into::<DecodedNode>::into(self.tree[child_idx]) {
-                DecodedNode::Root(base) => {
-                    let row = self.read_row(parent_idx);
-                    let mut addition = [Node::blank(); 256];
-                    addition[*octet as usize] = Node::sec(parent_idx, 0, None);
-                    self.erase_row(parent_idx);
-                    let new_base = self.paste(row, addition, base);
-                    self.tree[parent_idx].base = new_base;
-                    parent_idx = (*octet as usize) ^ new_base;
-                    extended = true;
-                },
-                DecodedNode::Blank => {
-                    self.tree[child_idx] = Node::sec(parent_idx, 0, None);
-                    extended = true;
+            let child = self.tree[child_idx];
+            if child.check == NO_PARENT {
+                if child.base == NO_CHILD {
+                    self.tree[child_idx] = Node::node(parent_idx, NO_CHILD, NO_ITEM);
                     parent_idx = child_idx;
-                },
-                DecodedNode::Term(check, id) => {
-                    if check == parent_idx {
-                        self.tree[child_idx] = Node::sec(check, 0, Some(id));
-                        extended = false;
-                        parent_idx = child_idx;
-                    }
-                    else {
-                        self.push_put(child_idx)?;
-                        self.tree[child_idx] = Node::sec(check, 0, None);
-                        extended = true;
-                        parent_idx = child_idx;
-                    }
-                },
-                DecodedNode::Sec(check, _, _) => {
-                    if check != parent_idx {
-                        self.push_put(child_idx)?;
-                        self.tree[child_idx] = Node::sec(check, 0, None);
-                        extended = true;
-                        parent_idx = child_idx;
-                    }
-                    else {
-                        extended = false;
-                        parent_idx = child_idx;
-                    }
-                },
+                }
+                // root case
+                else {
+                    parent_idx = self.insert_by_slide_brothers(child_idx, parent_idx).unwrap();
+                }
+            }
+            else {
+                if child.check == parent_idx {
+                    parent_idx = child_idx;
+                }
+                // conflict case
+                else {
+                    let brother_num  = self.count_children(parent_idx);
+                    let stranger_num = self.count_children(child.check);
+                    parent_idx =
+                        if brother_num > stranger_num {
+                            self.insert_by_push_out(child_idx, parent_idx).unwrap()
+                        }
+                        else {
+                            self.insert_by_slide_brothers(child_idx, parent_idx).unwrap()
+                        };
+                }
             }
         }
         let cargo_id = self.storage.len();
         self.storage.push(cargo);
-        match Into::<DecodedNode>::into(self.tree[parent_idx]) {
-            DecodedNode::Blank => unreachable!(),
-            DecodedNode::Root(_) => {
-                unreachable!();
-            },
-            DecodedNode::Term(_, _) => unreachable!(),
-            DecodedNode::Sec(check, base, _) => {
-                if extended {
-                    self.tree[parent_idx] = Node::term(check, cargo_id);
-                }
-                else {
-                    self.tree[parent_idx] = Node::sec(check, base, Some(cargo_id));
-                }
-            }
-        }
+        self.tree[parent_idx].id = cargo_id;
         Ok(())
     }
+}
 
+impl<T> Trie<T> {
     #[allow(dead_code)]
     pub fn find(&self, way: &[u8]) -> Result<&T, ()> {
         match self.explore(way) {
@@ -608,17 +660,66 @@ impl<T> Trie<T> {
 mod test_add_find {
     use super::*;
     #[test]
-    fn test_add_fin() {
+    fn test_add_find() {
         let mut trie: Trie<String> = Trie::new();
+        trie.add(&[2, 1], "21".to_string()).unwrap();
+        trie.add(&[1, 1], "11".to_string()).unwrap();
         trie.add(&[1, 2, 3], "123".to_string()).unwrap();
         trie.add(&[0], "0".to_string()).unwrap();
+        trie.add(&[0, 0], "00".to_string()).unwrap();
         trie.add(&[1, 2], "12".to_string()).unwrap();
         trie.add(&[1, 2, 0], "120".to_string()).unwrap();
+        trie.add(&[3, 1, 3], "313".to_string()).unwrap();
+        trie.add(&[1, 6, 1], "161".to_string()).unwrap();
         trie.add(&[0, 1], "01".to_string()).unwrap();
+        trie.add(&[2, 0], "20".to_string()).unwrap();
+
         assert_eq!(trie.find(&[0]), Ok(&"0".to_string()));
+        assert_eq!(trie.find(&[0]), Ok(&"0".to_string()));
+        assert_eq!(trie.find(&[0, 0]), Ok(&"00".to_string()));
         assert_eq!(trie.find(&[1, 2, 3]), Ok(&"123".to_string()));
         assert_eq!(trie.find(&[1, 2]), Ok(&"12".to_string()));
         assert_eq!(trie.find(&[1, 2, 0]), Ok(&"120".to_string()));
+        assert_eq!(trie.find(&[3, 1, 3]), Ok(&"313".to_string()));
+        assert_eq!(trie.find(&[1, 6, 1]), Ok(&"161".to_string()));
         assert_eq!(trie.find(&[0, 1]), Ok(&"01".to_string()));
+        assert_eq!(trie.find(&[2, 0]), Ok(&"20".to_string()));
+        assert_eq!(trie.find(&[2, 1]), Ok(&"21".to_string()));
+        assert_eq!(trie.find(&[1]), Err(()));
+        assert_eq!(trie.find(&[7, 4]), Err(()));
+    }
+
+    #[test]
+    fn test_add() {
+        let mut trie: Trie<String> = Trie::new();
+        trie.add("張り込め".as_bytes(), "張り込め".to_string()).unwrap();
+        trie.add("ニッカーボッカー".as_bytes(), "ニッカーボッカー".to_string()).unwrap();
+        trie.add("証城寺".as_bytes(), "証城寺".to_string()).unwrap();
+        trie.add("差し昇っ".as_bytes(), "差し登っ".to_string()).unwrap();
+        trie.add("抜け出せれ".as_bytes(), "抜け出せれ".to_string()).unwrap();
+        trie.add("たい".as_bytes(), "たい".to_string()).unwrap();
+        trie.add("アオガエル".as_bytes(), "アオガエル".to_string()).unwrap();
+        trie.add("長府浜浦".as_bytes(), "長府浜浦".to_string()).unwrap();
+        trie.add("中佃".as_bytes(), "中佃".to_string()).unwrap();
+        trie.add("幻視".as_bytes(), "幻視".to_string()).unwrap();
+        trie.add("小船木".as_bytes(), "小船木".to_string()).unwrap();
+        trie.add("浅黒かれ".as_bytes(), "浅黒かれ".to_string()).unwrap();
+        trie.add("扁かろ".as_bytes(), "扁かろ".to_string()).unwrap();
+        trie.add("咲き乱れ".as_bytes(), "咲き乱れ".to_string()).unwrap();
+
+        assert_eq!(trie.find("張り込め".as_bytes()), Ok(&"張り込め".to_string()));
+        assert_eq!(trie.find("ニッカーボッカー".as_bytes()), Ok(&"ニッカーボッカー".to_string()));
+        assert_eq!(trie.find("証城寺".as_bytes()), Ok(&"証城寺".to_string()));
+        assert_eq!(trie.find("差し昇っ".as_bytes()), Ok(&"差し登っ".to_string()));
+        assert_eq!(trie.find("抜け出せれ".as_bytes()), Ok(&"抜け出せれ".to_string()));
+        assert_eq!(trie.find("たい".as_bytes()), Ok(&"たい".to_string()));
+        assert_eq!(trie.find("アオガエル".as_bytes()), Ok(&"アオガエル".to_string()));
+        assert_eq!(trie.find("長府浜浦".as_bytes()), Ok(&"長府浜浦".to_string()));
+        assert_eq!(trie.find("中佃".as_bytes()), Ok(&"中佃".to_string()));
+        assert_eq!(trie.find("幻視".as_bytes()), Ok(&"幻視".to_string()));
+        assert_eq!(trie.find("小船木".as_bytes()), Ok(&"小船木".to_string()));
+        assert_eq!(trie.find("浅黒かれ".as_bytes()), Ok(&"浅黒かれ".to_string()));
+        assert_eq!(trie.find("扁かろ".as_bytes()), Ok(&"扁かろ".to_string()));
+        assert_eq!(trie.find("咲き乱れ".as_bytes()), Ok(&"咲き乱れ".to_string()));
     }
 }
