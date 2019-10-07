@@ -9,10 +9,10 @@ pub struct DictCfg {
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
 pub struct Word<T> {
-    info: T,
-    word: String,
-    gencost: i64,
-    matrix_id: usize,
+    pub info: T,
+    pub word: String,
+    pub gencost: i64,
+    pub matrix_id: usize,
 }
 
 fn split_by_comma<'a>(line: &'a str) -> Vec<&'a str> {

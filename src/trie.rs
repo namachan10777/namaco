@@ -3,9 +3,7 @@ use std::usize;
 use crypto::sha2::Sha256;
 use crypto::digest::Digest;
 use serde_derive::{Serialize, Deserialize};
-use serde::de::DeserializeOwned;
 use serde::{Serialize};
-use bincode;
 
 #[derive(Clone, PartialEq, Debug, Copy, Serialize, Deserialize)]
 struct Node {
@@ -725,45 +723,5 @@ mod test_add_find {
         assert_eq!(trie.find("浅黒かれ".as_bytes()), Ok(&"浅黒かれ".to_string()));
         assert_eq!(trie.find("扁かろ".as_bytes()), Ok(&"扁かろ".to_string()));
         assert_eq!(trie.find("咲き乱れ".as_bytes()), Ok(&"咲き乱れ".to_string()));
-    }
-}
-
-use std::io::{Write, Read};
-use std::io;
-
-impl<T: Serialize + DeserializeOwned> Trie<T> {
-    pub fn export<W: Write>(&self, target: &mut W) -> Result<(), io::Error> {
-        let mut stream = io::BufWriter::new(target);
-        stream.write(&bincode::serialize(&self).unwrap())?;
-        Ok(())
-    }
-
-    pub fn import<R: Read>(target: &mut R) -> Result<Trie<T>, io::Error> {
-        let mut stream = io::BufReader::new(target);
-        let mut buf = Vec::new();
-        stream.read_to_end(&mut buf)?;
-        let trie = bincode::deserialize(&buf);
-        Ok(trie.unwrap())
-    }
-}
-
-#[cfg(test)]
-mod test_import_export {
-    use std::io::Cursor;
-    use super::*;
-    #[test]
-    fn test() {
-        let mut buf = Vec::new();
-        let mut trie = Trie::new();
-        trie.add("張り込め".as_bytes(), "張り込め".to_string()).unwrap();
-        trie.add("ニッカーボッカー".as_bytes(), "ニッカーボッカー".to_string()).unwrap();
-        trie.add("証城寺".as_bytes(), "証城寺".to_string()).unwrap();
-        trie.export(&mut buf).unwrap();
-
-        let mut cursor = Cursor::new(buf);
-        let trie2 = Trie::import(&mut cursor).unwrap();
-        assert_eq!(trie2.find("張り込め".as_bytes()), Ok(&"張り込め".to_string()));
-        assert_eq!(trie2.find("ニッカーボッカー".as_bytes()), Ok(&"ニッカーボッカー".to_string()));
-        assert_eq!(trie2.find("証城寺".as_bytes()), Ok(&"証城寺".to_string()));
     }
 }

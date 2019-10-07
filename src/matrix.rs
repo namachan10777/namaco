@@ -1,5 +1,7 @@
-#[allow(dead_code)]
-struct Matrix {
+use serde_derive::{Serialize, Deserialize};
+
+#[derive(Serialize, Deserialize)]
+pub struct Matrix {
     internal: Vec<i32>,
     id_size: usize,
 }
