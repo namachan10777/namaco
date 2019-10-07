@@ -1,10 +1,13 @@
 // copyright (c) 2019 Nakano Masaki <namachan10777@gmail>
-extern crate crypto;
 use std::usize;
 use crypto::sha2::Sha256;
 use crypto::digest::Digest;
+use serde_derive::{Serialize, Deserialize};
+use serde::de::DeserializeOwned;
+use serde::{Serialize};
+use bincode;
 
-#[derive(Clone, PartialEq, Debug, Copy)]
+#[derive(Clone, PartialEq, Debug, Copy, Serialize, Deserialize)]
 struct Node {
     base: usize,
     check: usize,
@@ -165,7 +168,8 @@ mod node_test {
     }
 }
 
-pub struct Trie<T> {
+#[derive(Serialize, Deserialize)]
+pub struct Trie<T: Serialize> {
     capacities: Vec<u8>,
     // 圧縮済みの遷移表
     tree: Vec<Node>,
@@ -176,7 +180,7 @@ pub struct Trie<T> {
 const ROW_LEN: usize = 256;
 type Row = [Node; ROW_LEN];
 
-impl<T> Trie<T> {
+impl<T: Serialize> Trie<T> {
     #[allow(dead_code)]
     pub fn new() -> Trie<T> {
         let mut tree = vec![Node::blank(); 256];
@@ -189,7 +193,7 @@ impl<T> Trie<T> {
     }
 }
 
-impl<T> Trie<T> {
+impl<T: Serialize> Trie<T> {
     // Ok(idx)
     // Err((passed times, last idx))
     fn explore(&self, way: &[u8]) -> Result<usize, (usize, usize)> {
@@ -284,7 +288,7 @@ mod test_explore {
     }
 }
 
-impl<T> Trie<T> {
+impl<T: Serialize> Trie<T> {
     // To reallocate base and expand tree if need to do.
     // FIXME bottleneck
     fn reallocate_base(&mut self, target: &[bool], cnt: u8) -> usize {
@@ -358,7 +362,7 @@ mod test_reallocate_base {
     }
 }
 
-impl<T> Trie<T> {
+impl<T: Serialize> Trie<T> {
     fn read_row(&self, parent_idx: usize) -> Row {
         let mut buf: Row = [Node::blank(); 256];
         let base = self.tree[parent_idx].base;
@@ -440,7 +444,7 @@ mod test_read_erase_row {
     }
 }
 
-impl<T> Trie<T> {
+impl<T: Serialize> Trie<T> {
     // This function forcely overwrite tree
     // 存在しなかったのにrowに入っているとfromを誤認する
     fn paste(&mut self, row: Row, addition: Row, from: usize) -> usize {
@@ -538,7 +542,7 @@ enum PushOutErr {
     IsRoot,
 }
 
-impl<T> Trie<T> {
+impl<T: Serialize> Trie<T> {
     fn insert_by_push_out(&mut self, target_idx: usize, parent_idx: usize) -> Result<usize, PushOutErr> {
         let parent = self.tree[parent_idx];
         let target = self.tree[target_idx];
@@ -593,7 +597,7 @@ impl<T> Trie<T> {
     }
 }
 
-impl<T> Trie<T> {
+impl<T: Serialize> Trie<T> {
     #[allow(dead_code)]
     pub fn add(&mut self, way: &[u8], cargo: T) -> Result<(), ()> {
         let mut parent_idx = 0;
@@ -638,7 +642,7 @@ impl<T> Trie<T> {
     }
 }
 
-impl<T> Trie<T> {
+impl<T: Serialize> Trie<T> {
     #[allow(dead_code)]
     pub fn find(&self, way: &[u8]) -> Result<&T, ()> {
         match self.explore(way) {
@@ -721,5 +725,45 @@ mod test_add_find {
         assert_eq!(trie.find("浅黒かれ".as_bytes()), Ok(&"浅黒かれ".to_string()));
         assert_eq!(trie.find("扁かろ".as_bytes()), Ok(&"扁かろ".to_string()));
         assert_eq!(trie.find("咲き乱れ".as_bytes()), Ok(&"咲き乱れ".to_string()));
+    }
+}
+
+use std::io::{Write, Read};
+use std::io;
+
+impl<T: Serialize + DeserializeOwned> Trie<T> {
+    pub fn export<W: Write>(&self, target: &mut W) -> Result<(), io::Error> {
+        let mut stream = io::BufWriter::new(target);
+        stream.write(&bincode::serialize(&self).unwrap())?;
+        Ok(())
+    }
+
+    pub fn import<R: Read>(target: &mut R) -> Result<Trie<T>, io::Error> {
+        let mut stream = io::BufReader::new(target);
+        let mut buf = Vec::new();
+        stream.read_to_end(&mut buf)?;
+        let trie = bincode::deserialize(&buf);
+        Ok(trie.unwrap())
+    }
+}
+
+#[cfg(test)]
+mod test_import_export {
+    use std::io::Cursor;
+    use super::*;
+    #[test]
+    fn test() {
+        let mut buf = Vec::new();
+        let mut trie = Trie::new();
+        trie.add("張り込め".as_bytes(), "張り込め".to_string()).unwrap();
+        trie.add("ニッカーボッカー".as_bytes(), "ニッカーボッカー".to_string()).unwrap();
+        trie.add("証城寺".as_bytes(), "証城寺".to_string()).unwrap();
+        trie.export(&mut buf).unwrap();
+
+        let mut cursor = Cursor::new(buf);
+        let trie2 = Trie::import(&mut cursor).unwrap();
+        assert_eq!(trie2.find("張り込め".as_bytes()), Ok(&"張り込め".to_string()));
+        assert_eq!(trie2.find("ニッカーボッカー".as_bytes()), Ok(&"ニッカーボッカー".to_string()));
+        assert_eq!(trie2.find("証城寺".as_bytes()), Ok(&"証城寺".to_string()));
     }
 }

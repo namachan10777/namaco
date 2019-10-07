@@ -1,10 +1,13 @@
+use serde_derive::{Serialize, Deserialize};
+use serde::Serialize;
+
 pub struct DictCfg {
     pub matrix_id: usize,
     pub word: usize,
     pub gencost: usize,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
 pub struct Word<T> {
     info: T,
     word: String,
@@ -81,7 +84,7 @@ use std::io::{BufRead, Read};
 use super::trie;
 
 #[allow(dead_code)]
-pub fn build_trie<R: Read, F, T>(readable: R, cfg: &DictCfg, classifier: F) -> Result<trie::Trie<Word<T>>, io::Error>
+pub fn build_trie<R: Read, F, T: Serialize>(readable: R, cfg: &DictCfg, classifier: F) -> Result<trie::Trie<Word<T>>, io::Error>
     where F: Fn(&[&str]) -> T
 {
     let mut reader = io::BufReader::new(readable);
