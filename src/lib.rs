@@ -3,6 +3,8 @@ mod matrix;
 pub mod parser;
 use std::io::{Read, Write};
 use std::io;
+use std::i64;
+use std::usize;
 use serde::{Serialize};
 use serde::de::DeserializeOwned;
 use serde_derive::{Serialize, Deserialize};
@@ -38,6 +40,75 @@ impl<T: Serialize + DeserializeOwned> Morph<T> {
         stream.read_to_end(&mut buf)?;
         let trie = bincode::deserialize(&buf);
         Ok(trie.unwrap())
+    }
+
+    pub fn parse(&self, input: &[u8]) -> Option<Vec<&Word<T>>> {
+        // dp[p] = (cost, lid, word)
+        // p    : position of end of word
+        // cost : total cost
+        // word : None or Word<T>
+        let mut dp: Vec<Vec<(i64, Vec<&Word<T>>)>> = Vec::new();
+        dp.resize_with(input.len(), || Vec::new());
+        // initialize dp
+        for end in 1..input.len() {
+            if let Ok(words) = self.trie.find(&input[..end]) {
+                for word in words {
+                    dp[end-1].push((word.gencost, vec![word]));
+                }
+            }
+        }
+        // fill dp
+        for end in 2..input.len() {
+            for begin in 1..end {
+                if let Ok(words) = self.trie.find(&input[begin..end]) {
+                    for word in words {
+                        let mut best: Option<(i64, Vec<&Word<T>>)> = None;
+                        for prev in &dp[begin-1] {
+                            let join_cost = self.matrix.at(prev.1.last().unwrap().matrix_id, word.matrix_id);
+                            let total_cost = prev.0 + word.gencost + join_cost as i64;
+                            best = match best {
+                                Some(inner) => {
+                                    if total_cost < inner.0 {
+                                        let mut path = prev.1.clone();
+                                        path.push(word);
+                                        Some((total_cost, path))
+                                    }
+                                    else {
+                                        Some(inner)
+                                    }
+                                },
+                                None => {
+                                    let mut path = prev.1.clone();
+                                    path.push(word);
+                                    Some((total_cost, path))
+                                }
+                            }
+                        }
+                        if let Some(inner) = best {
+                            dp[end-1].push(inner);
+                        }
+                    }
+                }
+            }
+        }
+
+        // select best path
+        let mut best: Option<(i64, &Vec<&Word<T>>)> = None;
+        for (cost, path) in &dp[input.len()-1] {
+            best = match best {
+                Some((best_cost, best_path)) =>
+                    if *cost < best_cost {
+                        Some((*cost, path))
+                    }
+                    else {
+                        Some((best_cost, best_path))
+                    },
+                None =>
+                    Some((*cost, path))
+            }
+        }
+
+        best.map(|x| x.1.clone())
     }
 }
 

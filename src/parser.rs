@@ -7,7 +7,7 @@ pub struct DictCfg {
     pub gencost: usize,
 }
 
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Serialize, Deserialize, Default, Clone)]
 pub struct Word<T> {
     pub info: T,
     pub word: String,
