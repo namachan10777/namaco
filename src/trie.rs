@@ -882,23 +882,24 @@ mod test_static_construction {
     #[test]
     fn test_add_static() {
         let trie = Trie::static_construction(&mut vec![
+            ("咲き乱れ".as_bytes(), "咲き乱れ".to_string()),
             ("張り込め".as_bytes(), "張り込め".to_string()),
-            ("ニッカーボッカー".as_bytes(), "ニッカーボッカー".to_string()),
-            ("証城寺".as_bytes(), "証城寺".to_string()),
-            ("差し昇っ".as_bytes(), "差し登っ".to_string()),
-            ("抜け出せれ".as_bytes(), "抜け出せれ".to_string()),
-            ("たい".as_bytes(), "たい".to_string()),
+            ("張り込め".as_bytes(), "張り込め".to_string()),
+            ("幻視".as_bytes(), "幻視".to_string()),
             ("アオガエル".as_bytes(), "アオガエル".to_string()),
+            ("扁かろ".as_bytes(), "扁かろ".to_string()),
+            ("証城寺".as_bytes(), "証城寺".to_string()),
+            ("たい".as_bytes(), "たい".to_string()),
+            ("ニッカーボッカー".as_bytes(), "ニッカーボッカー".to_string()),
+            ("抜け出せれ".as_bytes(), "抜け出せれ".to_string()),
             ("長府浜浦".as_bytes(), "長府浜浦".to_string()),
             ("中佃".as_bytes(), "中佃".to_string()),
-            ("幻視".as_bytes(), "幻視".to_string()),
             ("小船木".as_bytes(), "小船木".to_string()),
+            ("差し昇っ".as_bytes(), "差し登っ".to_string()),
             ("浅黒かれ".as_bytes(), "浅黒かれ".to_string()),
-            ("扁かろ".as_bytes(), "扁かろ".to_string()),
-            ("咲き乱れ".as_bytes(), "咲き乱れ".to_string()),
         ]);
 
-        assert_eq!(trie.find("張り込め".as_bytes()), Ok(&["張り込め".to_string()][..]));
+        assert_eq!(trie.find("張り込め".as_bytes()), Ok(&["張り込め".to_string(), "張り込め".to_string()][..]));
         assert_eq!(trie.find("ニッカーボッカー".as_bytes()), Ok(&["ニッカーボッカー".to_string()][..]));
         assert_eq!(trie.find("証城寺".as_bytes()), Ok(&["証城寺".to_string()][..]));
         assert_eq!(trie.find("差し昇っ".as_bytes()), Ok(&["差し登っ".to_string()][..]));
