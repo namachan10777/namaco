@@ -289,7 +289,7 @@ mod test_explore {
 impl<T: Serialize> Trie<T> {
     // To reallocate base and expand tree if need to do.
     // FIXME bottleneck
-    fn reallocate_base(&mut self, target: &[bool], cnt: u8) -> usize {
+    fn reallocate_base(&mut self, target: &[bool; 256], cnt: u8) -> usize {
         for block_idx in 0..self.capacities.len() {
             if self.capacities[block_idx] >= cnt {
                 for innser_offset in 0..256 {
@@ -714,6 +714,189 @@ mod test_add_find {
         trie.add("浅黒かれ".as_bytes(), "浅黒かれ".to_string()).unwrap();
         trie.add("扁かろ".as_bytes(), "扁かろ".to_string()).unwrap();
         trie.add("咲き乱れ".as_bytes(), "咲き乱れ".to_string()).unwrap();
+
+        assert_eq!(trie.find("張り込め".as_bytes()), Ok(&["張り込め".to_string()][..]));
+        assert_eq!(trie.find("ニッカーボッカー".as_bytes()), Ok(&["ニッカーボッカー".to_string()][..]));
+        assert_eq!(trie.find("証城寺".as_bytes()), Ok(&["証城寺".to_string()][..]));
+        assert_eq!(trie.find("差し昇っ".as_bytes()), Ok(&["差し登っ".to_string()][..]));
+        assert_eq!(trie.find("抜け出せれ".as_bytes()), Ok(&["抜け出せれ".to_string()][..]));
+        assert_eq!(trie.find("たい".as_bytes()), Ok(&["たい".to_string()][..]));
+        assert_eq!(trie.find("アオガエル".as_bytes()), Ok(&["アオガエル".to_string()][..]));
+        assert_eq!(trie.find("長府浜浦".as_bytes()), Ok(&["長府浜浦".to_string()][..]));
+        assert_eq!(trie.find("中佃".as_bytes()), Ok(&["中佃".to_string()][..]));
+        assert_eq!(trie.find("幻視".as_bytes()), Ok(&["幻視".to_string()][..]));
+        assert_eq!(trie.find("小船木".as_bytes()), Ok(&["小船木".to_string()][..]));
+        assert_eq!(trie.find("浅黒かれ".as_bytes()), Ok(&["浅黒かれ".to_string()][..]));
+        assert_eq!(trie.find("扁かろ".as_bytes()), Ok(&["扁かろ".to_string()][..]));
+        assert_eq!(trie.find("咲き乱れ".as_bytes()), Ok(&["咲き乱れ".to_string()][..]));
+    }
+}
+
+use core::fmt::Debug;
+impl<T: Serialize + Clone + Debug> Trie<T> {
+    fn sort_dict(src: &mut Vec<(&[u8], T)>) {
+        src.sort_by(|a, b| a.0.partial_cmp(b.0).unwrap());
+    }
+
+    // expect sorted
+    fn get_domain<'a, 'b>(src: &'a [(&'b [u8], T)], select: usize, target: u8) -> &'a [(&'b [u8], T)] {
+        let mut begin = None;
+        let mut end = None;
+
+        for i in 0..src.len() {
+            if src[i].0[select] == target {
+                if begin == None {
+                    begin = Some(i);
+                }
+            }
+            if begin != None && end == None && src[i].0[select] != target {
+                end = Some(i);
+            }
+        }
+        match (begin, end) {
+            (Some(begin), Some(end)) => &src[begin..end],
+            (Some(begin), None) => &src[begin..],
+            _ => unreachable!()
+        }
+    }
+
+    pub fn add_static(&mut self, src: &[(&[u8], T)], select: usize, parent_idx: usize) -> usize {
+        let mut row = [Node::default(); 256];
+        let mut mask = [false; 256];
+        let mut update = [false;256];
+        let mut cnt = if src[0].0[select] == 0 { 1 } else { 0 };
+        let mut before = 0u8;
+
+        for (way, cargo) in src {
+            mask[way[select] as usize] = true;
+            if way.len() == select + 1 {
+                if row[way[select] as usize].id != NO_ITEM {
+                    self.storage[row[way[select] as usize].id as usize].push(cargo.clone());
+                }
+                else {
+                    self.storage.push(vec![cargo.clone()]);
+                    row[way[select] as usize] = Node::sec(parent_idx, 0, Some(self.storage.len() - 1));
+                }
+            }
+            else {
+                update[way[select] as usize] = true;
+                row[way[select] as usize] = Node::sec(parent_idx, 0, None);
+            }
+            if way[select] > before {
+                cnt += 1;
+                before = way[select];
+            }
+        }
+
+        let base = self.reallocate_base(&mask, cnt);
+        for i in 0..256 {
+            if mask[i] {
+                self.tree[i ^ base] = row[i];
+            }
+        }
+        for i in 0..256 {
+            if update[i] {
+                let idx = i ^ base;
+                self.tree[idx].base = self.add_static(Self::get_domain(src, select, i as u8), select+1, idx);
+            }
+        }
+        base
+    }
+
+    pub fn static_construction(src: &mut Vec<(&[u8], T)>) -> Trie<T> {
+        Trie::sort_dict(src);
+        let mut trie = Trie::new();
+        trie.tree[0] = Node::root(0);
+        trie.tree[0].base = trie.add_static(src, 0, 0);
+        trie
+    }
+}
+#[cfg(test)]
+mod test_static_construction {
+    use super::*;
+    #[test]
+    fn test_sort() {
+        let mut dict = vec![
+            (&[1, 2, 3][..], "123"),
+            (&[1, 2, 3, 5][..], "1235"),
+            (&[1, 2, 3, 4][..], "1234"),
+            (&[1, 2, 3][..], "123"),
+        ];
+        Trie::sort_dict(&mut dict);
+        assert_eq!(dict, vec![
+            (&[1, 2, 3][..], "123"),
+            (&[1, 2, 3][..], "123"),
+            (&[1, 2, 3, 4][..], "1234"),
+            (&[1, 2, 3, 5][..], "1235"),
+        ]);
+    }
+
+    #[test]
+    fn test_get_domain() {
+        let src = [
+            (&[0, 0, 0][..], "000"),
+            (&[0, 1, 2][..], "012"),
+            (&[0, 1, 3][..], "013"),
+            (&[0, 1, 3][..], "013"),
+            (&[0, 1, 3, 4][..], "0134"),
+            (&[1, 0][..], "10"),
+            (&[1, 1][..], "11"),
+            (&[2, 1, 2][..], "212"),
+        ];
+        assert_eq!(
+            Trie::get_domain(&src[..], 0, 0),
+            &[
+                (&[0, 0, 0][..], "000"),
+                (&[0, 1, 2][..], "012"),
+                (&[0, 1, 3][..], "013"),
+                (&[0, 1, 3][..], "013"),
+                (&[0, 1, 3, 4][..], "0134"),
+            ][..]);
+        assert_eq!(
+            Trie::get_domain(Trie::get_domain(&src[..], 0, 0), 1, 1),
+            &[
+                (&[0, 1, 2][..], "012"),
+                (&[0, 1, 3][..], "013"),
+                (&[0, 1, 3][..], "013"),
+                (&[0, 1, 3, 4][..], "0134"),
+            ][..]);
+        assert_eq!(
+            Trie::get_domain(Trie::get_domain(Trie::get_domain(&src[..], 0, 0), 1, 1), 2, 2),
+            &[
+                (&[0, 1, 2][..], "012"),
+            ][..]);
+        assert_eq!(
+            Trie::get_domain(&src[..], 0, 1),
+            &[
+                (&[1, 0][..], "10"),
+                (&[1, 1][..], "11"),
+            ][..]);
+        assert_eq!(
+            Trie::get_domain(&src[..], 0, 2),
+            &[
+                (&[2, 1, 2][..], "212"),
+            ][..]);
+
+    }
+
+    #[test]
+    fn test_add_static() {
+        let trie = Trie::static_construction(&mut vec![
+            ("張り込め".as_bytes(), "張り込め".to_string()),
+            ("ニッカーボッカー".as_bytes(), "ニッカーボッカー".to_string()),
+            ("証城寺".as_bytes(), "証城寺".to_string()),
+            ("差し昇っ".as_bytes(), "差し登っ".to_string()),
+            ("抜け出せれ".as_bytes(), "抜け出せれ".to_string()),
+            ("たい".as_bytes(), "たい".to_string()),
+            ("アオガエル".as_bytes(), "アオガエル".to_string()),
+            ("長府浜浦".as_bytes(), "長府浜浦".to_string()),
+            ("中佃".as_bytes(), "中佃".to_string()),
+            ("幻視".as_bytes(), "幻視".to_string()),
+            ("小船木".as_bytes(), "小船木".to_string()),
+            ("浅黒かれ".as_bytes(), "浅黒かれ".to_string()),
+            ("扁かろ".as_bytes(), "扁かろ".to_string()),
+            ("咲き乱れ".as_bytes(), "咲き乱れ".to_string()),
+        ]);
 
         assert_eq!(trie.find("張り込め".as_bytes()), Ok(&["張り込め".to_string()][..]));
         assert_eq!(trie.find("ニッカーボッカー".as_bytes()), Ok(&["ニッカーボッカー".to_string()][..]));
