@@ -1,3 +1,6 @@
 /target
 callgrind.out.*
 callgrind.out
+*.pdf
+*.dot
+*.csv
