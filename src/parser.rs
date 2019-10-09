@@ -7,7 +7,7 @@ pub struct DictCfg {
     pub gencost: usize,
 }
 
-#[derive(Debug, PartialEq, Serialize, Deserialize, Default, Clone)]
+#[derive(Debug, PartialEq, Serialize, Deserialize, Clone)]
 pub struct Word<T> {
     pub info: T,
     pub word: String,
@@ -61,7 +61,7 @@ mod test_split_by_comma {
 }
 
 #[allow(dead_code)]
-pub fn parse_line<F, T>(cfg: &DictCfg, classifier: F, line: &str) -> (Vec<u8>, Word<T>)
+pub fn parse_line<F, T: Clone>(cfg: &DictCfg, classifier: F, line: &str) -> (Vec<u8>, Word<T>)
     where F: Fn(&[&str]) -> T
 {
     let arr: Vec<&str> = split_by_comma(line);
@@ -82,20 +82,20 @@ pub fn parse_line<F, T>(cfg: &DictCfg, classifier: F, line: &str) -> (Vec<u8>, W
 use std::io;
 use std::io::{BufRead, Read};
 use super::trie;
+use core::fmt::Debug;
 
 #[allow(dead_code)]
-pub fn build_trie<R: Read, F, T: Serialize>(readable: R, cfg: &DictCfg, classifier: F) -> Result<trie::Trie<Word<T>>, io::Error>
+pub fn build_trie<R: Read, F, T: Serialize + Clone + Debug>(readable: R, cfg: &DictCfg, classifier: F) -> Result<trie::Trie<Word<T>>, io::Error>
     where F: Fn(&[&str]) -> T
 {
     let mut reader = io::BufReader::new(readable);
     let mut buf = String::new();
-    let mut trie = trie::Trie::new();
+    let mut dict = Vec::new();
     while reader.read_line(&mut buf)? > 0 {
-        let (key, info) = parse_line(&cfg, &classifier, &buf);
-        trie.add(&key, info).unwrap();
+        dict.push(parse_line(&cfg, &classifier, &buf));
         buf.clear();
     }
-    Ok(trie)
+    Ok(trie::Trie::static_construction(&mut dict.iter().map(|x| (&x.0[..], x.1.clone())).collect()))
 }
 
 #[cfg(test)]
