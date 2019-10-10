@@ -169,6 +169,7 @@ mod node_test {
 #[derive(Serialize, Deserialize)]
 pub struct Trie<T: Serialize> {
     capacities: Vec<u8>,
+    cache: Vec<usize>,
     // 圧縮済みの遷移表
     tree: Vec<Node>,
     // 辞書本体
@@ -184,6 +185,7 @@ impl<T: Serialize> Trie<T> {
         let mut tree = vec![Node::blank(); 256];
         tree[0] = Node::root(0);
         Trie {
+            cache: vec![0;256],
             capacities: vec![254],
             tree,
             storage: Vec::new(),
@@ -274,6 +276,7 @@ mod test_explore {
         tree[7] = Node::sec(2, 4, Some(3));
         tree[5] = Node::term(7, 4);
         let trie = Trie {
+            cache: vec![0;256],
             capacities: vec![249, 255],
             tree,
             storage: Vec::new() as Vec<Vec<String>>,
@@ -293,7 +296,7 @@ impl<T: Serialize> Trie<T> {
     // To reallocate base and expand tree if need to do.
     // FIXME bottleneck
     fn reallocate_base(&mut self, target: &[bool; 256], cnt: u8) -> usize {
-        for block_idx in 0..self.capacities.len() {
+        for block_idx in self.cache[cnt as usize]..self.capacities.len() {
             if self.capacities[block_idx] >= cnt {
                 for innser_offset in 0..256 {
                     let mut safe = true;
@@ -305,6 +308,9 @@ impl<T: Serialize> Trie<T> {
                         }
                     }
                     if safe {
+                        for i in (cnt as usize)..self.cache.len() {
+                            self.cache[i] = std::cmp::max(self.cache[i], block_idx);
+                        }
                         return offset;
                     }
                 }
@@ -329,6 +335,7 @@ mod test_reallocate_base {
         let mut tree = vec![Node::term(0, 0); 512];
         tree[6] = Node::blank();
         let mut trie: Trie<String> = Trie {
+            cache: vec![0;256],
             capacities: vec![1, 0],
             tree,
             storage: Vec::new(),
@@ -407,6 +414,7 @@ mod test_read_erase_row {
         tree[2] = Node::term(0, 0);
         tree[64] = Node::term(1, 0);
         let trie: Trie<String> = Trie {
+            cache: vec![0;256],
             capacities: vec![251, 255],
             tree,
             storage: Vec::new(),
@@ -432,6 +440,7 @@ mod test_read_erase_row {
         tree[2] = Node::term(0, 0);
         tree[64] = Node::term(1, 0);
         let mut trie: Trie<String> = Trie {
+            cache: vec![0;256],
             capacities: vec![251, 255],
             tree,
             storage: Vec::new(),
@@ -506,6 +515,7 @@ mod test_paste {
         row[2] = Node::term(1, 0);
 
         let mut trie: Trie<String> = Trie {
+            cache: vec![0;256],
             capacities: vec![253, 255],
             tree,
             storage: Vec::new(),
@@ -523,6 +533,7 @@ mod test_paste {
         let mut tree2 = vec![Node::blank(); 512];
         tree2[0] = Node::root(0);
         let mut trie2: Trie<String> = Trie {
+            cache: vec![0;256],
             capacities: vec![251, 255],
             tree: tree2,
             storage: Vec::new(),
