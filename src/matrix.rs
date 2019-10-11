@@ -19,7 +19,7 @@ impl Matrix {
         let splited_line: Vec<&str> = buf.trim().split(' ').collect();
         let lsize: usize = splited_line[0].parse().unwrap();
         let rsize: usize = splited_line[1].parse().unwrap();
-        internal.resize(lsize * rsize, 0);
+        internal.resize(lsize * rsize, std::i32::MAX);
 
         loop{
             buf.clear();

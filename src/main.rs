@@ -37,14 +37,33 @@ fn main() {
         let mut matrix_file = fs::File::open(matches.value_of("MATRIX").unwrap()).unwrap();
         let mut output_file = fs::File::create(matches.value_of("OUTPUT").unwrap()).unwrap();
         let cfg = namaco::parser::DictCfg {
-            gencost: 3,
-            matrix_id: 1,
-            word: 0,
+            surface: 0,
+            lid: 1,
+            rid: 2,
+            cost: 3,
         };
-        let morph = namaco::Morph::from_text(&mut matrix_file, &mut dict_file, &cfg, |arr| arr.join(",")).unwrap();
+        let meta = fs::metadata(matches.value_of("DICT").unwrap()).unwrap();
+        let morph = namaco::Morph::from_text(&mut matrix_file, &mut dict_file, &cfg, |arr| arr.join(","), Some(meta.len() as usize)).unwrap();
         morph.export(&mut output_file).unwrap();
     }
     else if let Some(matches) = matches.subcommand_matches("repl") {
         let morph: namaco::Morph<String> = namaco::Morph::import(&mut fs::File::open(matches.value_of("DICT").unwrap()).unwrap()).unwrap();
+        let mut buf = String::new();
+        loop {
+            buf.clear();
+            if std::io::stdin().read_line(&mut buf).ok() == Some(0) {
+                break;
+            }
+            match morph.parse(buf.trim().as_bytes()) {
+                Some(arr) => {
+                    for x in arr {
+                        println!("{:?}", x);
+                    }
+                },
+                None => {
+                    println!("failed to parse");
+                }
+            }
+        }
     }
 }

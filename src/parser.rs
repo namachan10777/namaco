@@ -2,17 +2,18 @@ use serde_derive::{Serialize, Deserialize};
 use serde::Serialize;
 
 pub struct DictCfg {
-    pub matrix_id: usize,
-    pub word: usize,
-    pub gencost: usize,
+    pub surface: usize,
+    pub cost: usize,
+    pub lid: usize,
+    pub rid: usize,
 }
 
 #[derive(Debug, PartialEq, Serialize, Deserialize, Clone)]
 pub struct Word<T> {
     pub info: T,
-    pub word: String,
-    pub gencost: i64,
-    pub matrix_id: usize,
+    pub cost: i64,
+    pub lid: usize,
+    pub rid: usize,
 }
 
 fn split_by_comma<'a>(line: &'a str) -> Vec<&'a str> {
@@ -65,17 +66,17 @@ pub fn parse_line<F, T: Clone>(cfg: &DictCfg, classifier: F, line: &str) -> (Vec
     where F: Fn(&[&str]) -> T
 {
     let arr: Vec<&str> = split_by_comma(line);
-    let matrix_id: usize = arr[cfg.matrix_id].parse().unwrap();
-    let gencost: i64 = arr[cfg.gencost].parse().unwrap();
-    let word_str : String = arr[cfg.word].to_string();
+    let lid: usize = arr[cfg.lid].parse().unwrap();
+    let rid: usize = arr[cfg.rid].parse().unwrap();
+    let cost: i64 = arr[cfg.cost].parse().unwrap();
     let info: T = classifier(&arr);
     let word = Word {
         info,
-        word: word_str.clone(),
-        gencost,
-        matrix_id,
+        cost,
+        lid,
+        rid,
     };
-    let key = word_str.as_bytes().to_vec();
+    let key = arr[cfg.surface].as_bytes().to_vec();
     (key, word)
 }
 
@@ -103,33 +104,34 @@ mod test_parser {
     use super::*;
     #[test]
     fn test_parser () {
-        let csv = "蟹,0,100,カニ\n土,1,200,ツチ\n味,2,300,アジ";
+        let csv = "蟹,0,10,100,カニ\n土,1,20,200,ツチ\n味,2,30,300,アジ";
         let cfg = DictCfg {
-            word: 0,
-            matrix_id: 1,
-            gencost: 2,
+            surface: 0,
+            lid: 1,
+            rid: 2,
+            cost: 3,
         };
         let result: trie::Trie<Word<String>> =
-            build_trie(csv.as_bytes(), &cfg, |arr| arr[3].trim().to_string()).unwrap();
+            build_trie(csv.as_bytes(), &cfg, |arr| arr[4].trim().to_string()).unwrap();
         assert_eq!(result.find("蟹".as_bytes()),
             Ok(&[Word {
-                matrix_id: 0,
-                gencost: 100,
-                word: "蟹".to_string(),
+                lid: 0,
+                rid: 10,
+                cost: 100,
                 info: "カニ".to_string(),
             }][..]));
         assert_eq!(result.find("土".as_bytes()),
             Ok(&[Word {
-                matrix_id: 1,
-                gencost: 200,
-                word: "土".to_string(),
+                lid: 1,
+                rid: 20,
+                cost: 200,
                 info: "ツチ".to_string(),
             }][..]));
         assert_eq!(result.find("味".as_bytes()),
             Ok(&[Word {
-                matrix_id: 2,
-                gencost: 300,
-                word: "味".to_string(),
+                lid: 2,
+                rid: 30,
+                cost: 300,
                 info: "アジ".to_string(),
             }][..]));
     }
