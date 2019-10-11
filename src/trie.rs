@@ -908,10 +908,6 @@ mod test_static_construction {
             ("浅黒かれ".as_bytes(), "浅黒かれ".to_string()),
         ]);
 
-        let mut f = std::fs::File::create("out.dot").unwrap();
-        use std::io::Write;
-        f.write(trie.pp_dot().as_bytes());
-
         assert_eq!(trie.find("張り込め".as_bytes()), Ok(&["張り込め".to_string()][..]));
         assert_eq!(trie.find("1".as_bytes()), Ok(&["1".to_string()][..]));
         assert_eq!(trie.find("1月".as_bytes()), Ok(&["1月".to_string()][..]));

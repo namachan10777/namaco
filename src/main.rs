@@ -37,9 +37,10 @@ fn main() {
         let mut matrix_file = fs::File::open(matches.value_of("MATRIX").unwrap()).unwrap();
         let mut output_file = fs::File::create(matches.value_of("OUTPUT").unwrap()).unwrap();
         let cfg = namaco::parser::DictCfg {
-            gencost: 3,
-            matrix_id: 1,
-            word: 0,
+            surface: 0,
+            lid: 1,
+            rid: 2,
+            cost: 3,
         };
         let meta = fs::metadata(matches.value_of("DICT").unwrap()).unwrap();
         let morph = namaco::Morph::from_text(&mut matrix_file, &mut dict_file, &cfg, |arr| arr.join(","), Some(meta.len() as usize)).unwrap();

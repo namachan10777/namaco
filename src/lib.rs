@@ -54,7 +54,7 @@ impl<T: Serialize + DeserializeOwned + Clone + Debug> Morph<T> {
         for end in 1..input.len() {
             if let Ok(words) = self.trie.find(&input[..end]) {
                 for word in words {
-                    dp[end-1].push((word.gencost, vec![word]));
+                    dp[end-1].push((word.cost, vec![word]));
                 }
             }
         }
@@ -65,8 +65,8 @@ impl<T: Serialize + DeserializeOwned + Clone + Debug> Morph<T> {
                     for word in words {
                         let mut best: Option<(i64, Vec<&Word<T>>)> = None;
                         for prev in &dp[begin-1] {
-                            let join_cost = self.matrix.at(prev.1.last().unwrap().matrix_id, word.matrix_id);
-                            let total_cost = prev.0 + word.gencost + join_cost as i64;
+                            let join_cost = self.matrix.at(prev.1.last().unwrap().lid, word.rid);
+                            let total_cost = prev.0 + word.cost + join_cost as i64;
                             best = match best {
                                 Some(inner) => {
                                     if total_cost < inner.0 {
@@ -120,9 +120,9 @@ mod test_morph {
 
     #[test]
     fn test_import_export() {
-        let dict_src = "蟹,0,100,カニ\n\
-                        土,1,200,ツチ\n\
-                        味,2,300,アジ";
+        let dict_src = "蟹,0,10,100,カニ\n\
+                        土,1,20,200,ツチ\n\
+                        味,2,30,300,アジ";
         let matrix_src = "3 3
                           0 0 100
                           0 1 121
@@ -134,36 +134,37 @@ mod test_morph {
                           2 1 -54
                           2 2 512";
         let cfg = parser::DictCfg {
-            word: 0,
-            matrix_id: 1,
-            gencost: 2,
+            surface: 0,
+            lid: 1,
+            rid: 2,
+            cost: 3,
         };
-        let morph = Morph::from_text(&mut Cursor::new(matrix_src.as_bytes()), &mut Cursor::new(dict_src.as_bytes()), &cfg, |arr| arr[3].trim().to_string()).unwrap();
+        let morph = Morph::from_text(&mut Cursor::new(matrix_src.as_bytes()), &mut Cursor::new(dict_src.as_bytes()), &cfg, |arr| arr[4].trim().to_string()).unwrap();
         let mut bytes = Vec::new();
         morph.export(&mut bytes).unwrap();
         let restored = Morph::import(&mut Cursor::new(bytes)).unwrap();
         assert_eq!(
             restored.trie.find("蟹".as_bytes()),
             Ok(&[Word {
-                matrix_id: 0,
-                gencost: 100,
-                word: "蟹".to_string(),
+                lid: 0,
+                rid: 10,
+                cost: 100,
                 info: "カニ".to_string(),
             }][..]));
         assert_eq!(
             restored.trie.find("土".as_bytes()),
             Ok(&[Word {
-                matrix_id: 1,
-                gencost: 200,
-                word: "土".to_string(),
+                lid: 1,
+                rid: 20,
+                cost: 200,
                 info: "ツチ".to_string(),
             }][..]));
         assert_eq!(
             restored.trie.find("味".as_bytes()),
             Ok(&[Word {
-                matrix_id: 2,
-                gencost: 300,
-                word: "味".to_string(),
+                lid: 2,
+                rid: 30,
+                cost: 300,
                 info: "アジ".to_string(),
             }][..]));
         assert_eq!(restored.matrix.at(0, 1), 121);
