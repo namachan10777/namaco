@@ -41,8 +41,7 @@ fn main() {
             matrix_id: 1,
             word: 0,
         };
-        let meta = fs::metadata(matches.value_of("DICT").unwrap()).unwrap();
-        let morph = namaco::Morph::from_text(&mut matrix_file, &mut dict_file, &cfg, |arr| arr.join(","), Some(meta.len() as usize)).unwrap();
+        let morph = namaco::Morph::from_text(&mut matrix_file, &mut dict_file, &cfg, |arr| arr.join(",")).unwrap();
         morph.export(&mut output_file).unwrap();
     }
 }

@@ -10,12 +10,13 @@ use serde_derive::{Serialize, Deserialize};
 pub use self::parser::Word as Word;
 
 #[derive(Serialize, Deserialize)]
-struct Morph<T: Serialize> {
+pub struct Morph<T: Serialize> {
     trie: trie::Trie<Word<T>>,
     matrix: matrix::Matrix,
 }
 
-impl<T: Serialize + DeserializeOwned> Morph<T> {
+use core::fmt::Debug;
+impl<T: Serialize + DeserializeOwned + Clone + Debug> Morph<T> {
     #[allow(dead_code)]
     pub fn from_text<R: Read, F>(matrix_src: &mut R, dict_src: &mut R, dict_cfg: &parser::DictCfg, classifier: F) -> Result<Self, io::Error> 
         where F: Fn(&[&str]) -> T {

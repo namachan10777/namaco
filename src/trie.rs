@@ -169,6 +169,7 @@ mod node_test {
 #[derive(Serialize, Deserialize)]
 pub struct Trie<T: Serialize> {
     capacities: Vec<u8>,
+    cache: Vec<usize>,
     // 圧縮済みの遷移表
     tree: Vec<Node>,
     // 辞書本体
@@ -184,6 +185,7 @@ impl<T: Serialize> Trie<T> {
         let mut tree = vec![Node::blank(); 256];
         tree[0] = Node::root(0);
         Trie {
+            cache: vec![0;256],
             capacities: vec![254],
             tree,
             storage: Vec::new(),
@@ -199,6 +201,9 @@ impl<T: Serialize> Trie<T> {
         let mut octet_count = 0usize;
         for octet in way {
             let check = here;
+            if self.tree[here].base == NO_CHILD {
+                return Err((octet_count, check))
+            }
             here = self.tree[here].base ^ (*octet as usize);
             if self.tree[here].check != check {
                 return Err((octet_count, check))
@@ -271,6 +276,7 @@ mod test_explore {
         tree[7] = Node::sec(2, 4, Some(3));
         tree[5] = Node::term(7, 4);
         let trie = Trie {
+            cache: vec![0;256],
             capacities: vec![249, 255],
             tree,
             storage: Vec::new() as Vec<Vec<String>>,
@@ -290,7 +296,7 @@ impl<T: Serialize> Trie<T> {
     // To reallocate base and expand tree if need to do.
     // FIXME bottleneck
     fn reallocate_base(&mut self, target: &[bool; 256], cnt: u8) -> usize {
-        for block_idx in 0..self.capacities.len() {
+        for block_idx in self.cache[cnt as usize]..self.capacities.len() {
             if self.capacities[block_idx] >= cnt {
                 for innser_offset in 0..256 {
                     let mut safe = true;
@@ -302,6 +308,9 @@ impl<T: Serialize> Trie<T> {
                         }
                     }
                     if safe {
+                        for i in (cnt as usize)..self.cache.len() {
+                            self.cache[i] = std::cmp::max(self.cache[i], block_idx);
+                        }
                         return offset;
                     }
                 }
@@ -326,6 +335,7 @@ mod test_reallocate_base {
         let mut tree = vec![Node::term(0, 0); 512];
         tree[6] = Node::blank();
         let mut trie: Trie<String> = Trie {
+            cache: vec![0;256],
             capacities: vec![1, 0],
             tree,
             storage: Vec::new(),
@@ -404,6 +414,7 @@ mod test_read_erase_row {
         tree[2] = Node::term(0, 0);
         tree[64] = Node::term(1, 0);
         let trie: Trie<String> = Trie {
+            cache: vec![0;256],
             capacities: vec![251, 255],
             tree,
             storage: Vec::new(),
@@ -429,6 +440,7 @@ mod test_read_erase_row {
         tree[2] = Node::term(0, 0);
         tree[64] = Node::term(1, 0);
         let mut trie: Trie<String> = Trie {
+            cache: vec![0;256],
             capacities: vec![251, 255],
             tree,
             storage: Vec::new(),
@@ -503,6 +515,7 @@ mod test_paste {
         row[2] = Node::term(1, 0);
 
         let mut trie: Trie<String> = Trie {
+            cache: vec![0;256],
             capacities: vec![253, 255],
             tree,
             storage: Vec::new(),
@@ -520,6 +533,7 @@ mod test_paste {
         let mut tree2 = vec![Node::blank(); 512];
         tree2[0] = Node::root(0);
         let mut trie2: Trie<String> = Trie {
+            cache: vec![0;256],
             capacities: vec![251, 255],
             tree: tree2,
             storage: Vec::new(),
@@ -732,10 +746,9 @@ mod test_add_find {
     }
 }
 
-use core::fmt::Debug;
-impl<T: Serialize + Clone + Debug> Trie<T> {
+impl<T: Serialize + Clone> Trie<T> {
     fn sort_dict(src: &mut Vec<(&[u8], T)>) {
-        src.sort_by(|a, b| a.0.partial_cmp(b.0).unwrap());
+        src.sort_by(|a, b| a.0.partial_cmp(&b.0).unwrap());
     }
 
     // expect sorted
@@ -744,7 +757,7 @@ impl<T: Serialize + Clone + Debug> Trie<T> {
         let mut end = None;
 
         for i in 0..src.len() {
-            if src[i].0[select] == target {
+            if src[i].0[select] == target && src[i].0.len() > select + 1 {
                 if begin == None {
                     begin = Some(i);
                 }
@@ -764,27 +777,27 @@ impl<T: Serialize + Clone + Debug> Trie<T> {
         let mut row = [Node::default(); 256];
         let mut mask = [false; 256];
         let mut update = [false;256];
-        let mut cnt = if src[0].0[select] == 0 { 1 } else { 0 };
-        let mut before = 0u8;
+        let mut before = -1i16;
+        let mut cnt = 0u8;
 
         for (way, cargo) in src {
             mask[way[select] as usize] = true;
-            if way.len() == select + 1 {
+            if way[select] as i16 > before {
+                cnt += 1;
+                before = way[select] as i16;
+                row[way[select] as usize] = Node::term(parent_idx, NO_ITEM);
+            }
+            if way.len() <= select + 1 {
                 if row[way[select] as usize].id != NO_ITEM {
                     self.storage[row[way[select] as usize].id as usize].push(cargo.clone());
                 }
                 else {
                     self.storage.push(vec![cargo.clone()]);
-                    row[way[select] as usize] = Node::sec(parent_idx, 0, Some(self.storage.len() - 1));
+                    row[way[select] as usize].id = self.storage.len() - 1;
                 }
             }
             else {
                 update[way[select] as usize] = true;
-                row[way[select] as usize] = Node::sec(parent_idx, 0, None);
-            }
-            if way[select] > before {
-                cnt += 1;
-                before = way[select];
             }
         }
 
@@ -861,11 +874,6 @@ mod test_static_construction {
                 (&[0, 1, 3, 4][..], "0134"),
             ][..]);
         assert_eq!(
-            Trie::get_domain(Trie::get_domain(Trie::get_domain(&src[..], 0, 0), 1, 1), 2, 2),
-            &[
-                (&[0, 1, 2][..], "012"),
-            ][..]);
-        assert_eq!(
             Trie::get_domain(&src[..], 0, 1),
             &[
                 (&[1, 0][..], "10"),
@@ -876,7 +884,6 @@ mod test_static_construction {
             &[
                 (&[2, 1, 2][..], "212"),
             ][..]);
-
     }
 
     #[test]
@@ -884,7 +891,8 @@ mod test_static_construction {
         let trie = Trie::static_construction(&mut vec![
             ("咲き乱れ".as_bytes(), "咲き乱れ".to_string()),
             ("張り込め".as_bytes(), "張り込め".to_string()),
-            ("張り込め".as_bytes(), "張り込め".to_string()),
+            ("1".as_bytes(), "1".to_string()),
+            ("1月".as_bytes(), "1月".to_string()),
             ("幻視".as_bytes(), "幻視".to_string()),
             ("アオガエル".as_bytes(), "アオガエル".to_string()),
             ("扁かろ".as_bytes(), "扁かろ".to_string()),
@@ -899,7 +907,13 @@ mod test_static_construction {
             ("浅黒かれ".as_bytes(), "浅黒かれ".to_string()),
         ]);
 
-        assert_eq!(trie.find("張り込め".as_bytes()), Ok(&["張り込め".to_string(), "張り込め".to_string()][..]));
+        let mut f = std::fs::File::create("out.dot").unwrap();
+        use std::io::Write;
+        f.write(trie.pp_dot().as_bytes());
+
+        assert_eq!(trie.find("張り込め".as_bytes()), Ok(&["張り込め".to_string()][..]));
+        assert_eq!(trie.find("1".as_bytes()), Ok(&["1".to_string()][..]));
+        assert_eq!(trie.find("1月".as_bytes()), Ok(&["1月".to_string()][..]));
         assert_eq!(trie.find("ニッカーボッカー".as_bytes()), Ok(&["ニッカーボッカー".to_string()][..]));
         assert_eq!(trie.find("証城寺".as_bytes()), Ok(&["証城寺".to_string()][..]));
         assert_eq!(trie.find("差し昇っ".as_bytes()), Ok(&["差し登っ".to_string()][..]));

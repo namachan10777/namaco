@@ -3,46 +3,46 @@ use serde_derive::{Serialize, Deserialize};
 #[derive(Serialize, Deserialize)]
 pub struct Matrix {
     internal: Vec<i32>,
-    id_size: usize,
+    rsize: usize,
 }
 
 use std::io::{Read, BufRead};
 use std::io;
-use std::cmp;
 
 impl Matrix {
     #[allow(dead_code)]
     pub fn new<R: Read>(file: &mut R) -> Result<Matrix, io::Error> {
-        let mut inputs = Vec::new();
         let mut reader = io::BufReader::new(file);
         let mut internal = Vec::new();
-        loop {
-            let mut buf = String::new();
+        let mut buf = String::new();
+        reader.read_line(&mut buf)?;
+        let splited_line: Vec<&str> = buf.trim().split(' ').collect();
+        let lsize: usize = splited_line[0].parse().unwrap();
+        let rsize: usize = splited_line[1].parse().unwrap();
+        internal.resize(lsize * rsize, 0);
+
+        loop{
+            buf.clear();
             if reader.read_line(&mut buf)? == 0 {
                 break;
             }
             let splited_line: Vec<&str> = buf.trim().split(' ').collect();
-            let lid  = splited_line[0].parse().unwrap();
-            let rid  = splited_line[1].parse().unwrap();
-            let cost = splited_line[2].parse().unwrap();
-            inputs.push((lid, rid, cost));
-            internal.push(cost);
-        }
+            let lid: usize  = splited_line[0].parse().unwrap();
+            let rid: usize  = splited_line[1].parse().unwrap();
+            let cost: i32 = splited_line[2].parse().unwrap();
 
-        let id_size = inputs
-            .iter()
-            .map(|(lid, rid, _)| cmp::max(lid, rid))
-            .fold(0, | max, x | cmp::max(max, *x));
+            internal[lid * rsize + rid] = cost;
+        }
 
         Ok(Matrix {
             internal,
-            id_size: id_size+1,
+            rsize,
         })
     }
 
     #[allow(dead_code)]
     pub fn at(&self, lid: usize, rid: usize) -> i32 {
-        self.internal[lid * self.id_size + rid]
+        self.internal[lid * self.rsize + rid]
     }
 }
 
