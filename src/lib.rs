@@ -123,7 +123,8 @@ mod test_morph {
         let dict_src = "蟹,0,100,カニ\n\
                         土,1,200,ツチ\n\
                         味,2,300,アジ";
-        let matrix_src = "0 0 100
+        let matrix_src = "3 3
+                          0 0 100
                           0 1 121
                           0 2 412
                           1 0 24

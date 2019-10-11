@@ -52,7 +52,8 @@ mod test_matrix {
     #[test]
     fn test() {
         let src =
-            "0 0 100
+            "3 3
+            0 0 100
             0 1 121
             0 2 412
             1 0 24
