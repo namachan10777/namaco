@@ -28,9 +28,9 @@ fn main() {
                          .value_name("OUTPUT")
                          .required(true)
                          .help("specify output file name")))
-        .arg(clap::Arg::with_name("ASSET")
-            .help("pass asset file")
-            .index(1))
+        .subcommand(clap::SubCommand::with_name("repl")
+            .arg(clap::Arg::with_name("DICT"))
+            .help("pass compiled dictionary"))
         .get_matches();
     if let Some(matches) = matches.subcommand_matches("compile") {
         let mut dict_file = fs::File::open(matches.value_of("DICT").unwrap()).unwrap();
@@ -45,5 +45,25 @@ fn main() {
         let meta = fs::metadata(matches.value_of("DICT").unwrap()).unwrap();
         let morph = namaco::Morph::from_text(&mut matrix_file, &mut dict_file, &cfg, |arr| arr.join(","), Some(meta.len() as usize)).unwrap();
         morph.export(&mut output_file).unwrap();
+    }
+    else if let Some(matches) = matches.subcommand_matches("repl") {
+        let morph: namaco::Morph<String> = namaco::Morph::import(&mut fs::File::open(matches.value_of("DICT").unwrap()).unwrap()).unwrap();
+        let mut buf = String::new();
+        loop {
+            buf.clear();
+            if std::io::stdin().read_line(&mut buf).ok() == Some(0) {
+                break;
+            }
+            match morph.parse(buf.trim().as_bytes()) {
+                Some(arr) => {
+                    for x in arr {
+                        println!("{:?}", x);
+                    }
+                },
+                None => {
+                    println!("failed to parse");
+                }
+            }
+        }
     }
 }
