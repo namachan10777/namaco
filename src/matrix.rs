@@ -16,8 +16,15 @@ impl Matrix {
         let mut inputs = Vec::new();
         let mut reader = io::BufReader::new(file);
         let mut internal = Vec::new();
-        loop {
-            let mut buf = String::new();
+        let mut buf = String::new();
+        reader.read_line(&mut buf)?;
+        let splited_line: Vec<&str> = buf.trim().split(' ').collect();
+        let lsize: usize = splited_line[0].parse().unwrap();
+        let rsize: usize = splited_line[1].parse().unwrap();
+        internal.resize(lsize * rsize, std::i32::MAX);
+
+        loop{
+            buf.clear();
             if reader.read_line(&mut buf)? == 0 {
                 break;
             }
