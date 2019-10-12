@@ -548,23 +548,17 @@ mod test_paste {
     }
 }
 
-#[derive(Debug, PartialEq)]
-enum PushOutErr {
-    Nop,
-    IsRoot,
-}
-
 impl<T: Serialize> Trie<T> {
-    fn insert_by_push_out(&mut self, target_idx: usize, parent_idx: usize) -> Result<usize, PushOutErr> {
+    fn insert_by_push_out(&mut self, target_idx: usize, parent_idx: usize) -> usize {
         let parent = self.tree[parent_idx];
         let target = self.tree[target_idx];
 
         if target.check == NO_PARENT {
             if target.base == NO_CHILD {
-                return Err(PushOutErr::Nop)
+                return target_idx;
             }
             else {
-                return Err(PushOutErr::IsRoot)
+                unreachable!();
             }
         }
 
@@ -594,10 +588,10 @@ impl<T: Serialize> Trie<T> {
         else {
             self.tree[target_idx] = Node::term(parent_idx, NO_ITEM);
         }
-        Ok(target_idx)
+        target_idx
     }
 
-    fn insert_by_slide_brothers(&mut self, target_idx: usize, parent_idx: usize) -> Result<usize, ()> {
+    fn insert_by_slide_brothers(&mut self, target_idx: usize, parent_idx: usize) -> usize {
         let parent = self.tree[parent_idx];
         let row = self.read_row(parent_idx);
         self.erase_row(parent_idx);
@@ -605,7 +599,7 @@ impl<T: Serialize> Trie<T> {
         addition[parent.base ^ target_idx] = Node::node(parent_idx, NO_CHILD, NO_ITEM);
         let new_base = self.paste(row, addition, parent.base);
         self.tree[parent_idx].base = new_base;
-        Ok(target_idx ^ parent.base ^ new_base)
+        target_idx ^ parent.base ^ new_base
     }
 }
 
@@ -626,7 +620,7 @@ impl<T: Serialize> Trie<T> {
                 }
                 // root case
                 else {
-                    parent_idx = self.insert_by_slide_brothers(child_idx, parent_idx).unwrap();
+                    parent_idx = self.insert_by_slide_brothers(child_idx, parent_idx);
                 }
             }
             else {
@@ -639,10 +633,10 @@ impl<T: Serialize> Trie<T> {
                     let stranger_num = self.count_children(child.check);
                     parent_idx =
                         if brother_num > stranger_num {
-                            self.insert_by_push_out(child_idx, parent_idx).unwrap()
+                            self.insert_by_push_out(child_idx, parent_idx)
                         }
                         else {
-                            self.insert_by_slide_brothers(child_idx, parent_idx).unwrap()
+                            self.insert_by_slide_brothers(child_idx, parent_idx)
                         };
                 }
             }
