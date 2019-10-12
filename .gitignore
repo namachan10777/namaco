@@ -4,3 +4,4 @@ callgrind.out
 *.pdf
 *.dot
 *.csv
+*.bin
