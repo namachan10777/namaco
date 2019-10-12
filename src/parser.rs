@@ -61,37 +61,20 @@ mod test_split_by_comma {
     }
 }
 
-pub fn parse_line<F, T: Clone>(cfg: &DictCfg, classifier: F, line: &str) -> (Vec<u8>, Word<T>)
-    where F: Fn(&[&str]) -> T
-{
-    let arr: Vec<&str> = split_by_comma(line);
-    let lid: usize = arr[cfg.lid].parse().unwrap();
-    let rid: usize = arr[cfg.rid].parse().unwrap();
-    let cost: i64 = arr[cfg.cost].parse().unwrap();
-    let info: T = classifier(&arr);
-    let word = Word {
-        info,
-        cost,
-        lid,
-        rid,
-    };
-    let key = arr[cfg.surface].as_bytes().to_vec();
-    (key, word)
-}
-
 use std::io;
 use std::io::{BufRead, Read};
 use super::trie;
 use core::fmt::Debug;
 
-pub fn build_trie<R: Read, F, T: Serialize + Clone + Debug>(readable: R, cfg: &DictCfg, classifier: F) -> Result<trie::Trie<Word<T>>, io::Error>
-    where F: Fn(&[&str]) -> T
+pub fn build_trie<R: Read, F, T: Serialize + Clone + Debug>(readable: R, classifier: F) -> Result<trie::Trie<Word<T>>, io::Error>
+    where F: Fn(&[&str]) -> (Vec<u8>, Word<T>)
 {
     let mut reader = io::BufReader::new(readable);
     let mut buf = String::new();
     let mut dict = Vec::new();
     while reader.read_line(&mut buf)? > 0 {
-        dict.push(parse_line(&cfg, &classifier, &buf));
+        let arr: Vec<&str> = split_by_comma(&buf);
+        dict.push(classifier(&arr));
         buf.clear();
     }
     Ok(trie::Trie::static_construction(&mut dict.iter().map(|x| (&x.0[..], x.1.clone())).collect()))
@@ -103,14 +86,18 @@ mod test_parser {
     #[test]
     fn test_parser () {
         let csv = "蟹,0,10,100,カニ\n土,1,20,200,ツチ\n味,2,30,300,アジ";
-        let cfg = DictCfg {
-            surface: 0,
-            lid: 1,
-            rid: 2,
-            cost: 3,
-        };
         let result: trie::Trie<Word<String>> =
-            build_trie(csv.as_bytes(), &cfg, |arr| String::from(arr[4].trim())).unwrap();
+            build_trie(
+                csv.as_bytes(),
+                |arr| (
+                    arr[0].as_bytes().to_vec(),
+                    Word {
+                        info: String::from(arr[4].trim()),
+                        lid: arr[1].parse().unwrap(),
+                        rid: arr[2].parse().unwrap(),
+                        cost: arr[3].parse().unwrap(),
+                    })
+            ).unwrap();
         assert_eq!(result.find("蟹".as_bytes()),
             Ok(&[Word {
                 lid: 0,

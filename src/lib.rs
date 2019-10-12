@@ -22,9 +22,9 @@ pub struct Morph<T: Serialize> {
 use core::fmt::Debug;
 impl<T: Serialize + DeserializeOwned + Clone + Debug> Morph<T> {
     #[allow(dead_code)]
-    pub fn from_text<R: Read, F>(matrix_src: &mut R, dict_src: &mut R, dict_cfg: &parser::DictCfg, classifier: F) -> Result<Self, io::Error> 
-        where F: Fn(&[&str]) -> T {
-        let trie = parser::build_trie(dict_src, dict_cfg, classifier)?;
+    pub fn from_text<R: Read, F>(matrix_src: &mut R, dict_src: &mut R, classifier: F) -> Result<Self, io::Error> 
+        where F: Fn(&[&str]) -> (Vec<u8>, Word<T>) {
+        let trie = parser::build_trie(dict_src, classifier)?;
         let matrix = matrix::Matrix::new(matrix_src).unwrap();
         Ok(Morph { trie, matrix })
     }
@@ -136,18 +136,19 @@ mod test_morph {
                           2 0 21
                           2 1 -54
                           2 2 512";
-        let cfg = parser::DictCfg {
-            surface: 0,
-            lid: 1,
-            rid: 2,
-            cost: 3,
-        };
         let morph =
             Morph::from_text(
                 &mut Cursor::new(matrix_src.as_bytes()),
                 &mut Cursor::new(dict_src.as_bytes()),
-                &cfg,
-                |arr| String::from(arr[4].trim())
+                |arr| (
+                    arr[0].as_bytes().to_vec(),
+                    Word {
+                        info: String::from(arr[4].trim()),
+                        lid: arr[1].parse().unwrap(),
+                        rid: arr[2].parse().unwrap(),
+                        cost: arr[3].parse().unwrap(),
+                    }
+                )
             ).unwrap();
         let mut bytes = Vec::new();
         morph.export(&mut bytes).unwrap();
@@ -208,15 +209,17 @@ mod test_morph {
             5 6 -12165
             6 6 -3547
             7 0 -409";
-        let cfg = parser::DictCfg {
-            surface: 0,
-            lid: 1,
-            rid: 2,
-            cost: 3,
-        };
         let morph =
-            Morph::from_text(&mut Cursor::new(matrix_src.as_bytes()), &mut Cursor::new(dict_src.as_bytes()), &cfg,
-                |arr| String::from(arr[4].trim())
+            Morph::from_text(&mut Cursor::new(matrix_src.as_bytes()), &mut Cursor::new(dict_src.as_bytes()),
+                |arr| (
+                    arr[0].as_bytes().to_vec(),
+                    Word {
+                        info: String::from(arr[4].trim()),
+                        lid: arr[1].parse().unwrap(),
+                        rid: arr[2].parse().unwrap(),
+                        cost: arr[3].parse().unwrap(),
+                    }
+                )
             ).unwrap();
         assert_eq!(morph.parse("東京都に住む".as_bytes()), Some(vec![
             String::from("東京・名詞・トウキョウ"),

@@ -36,13 +36,19 @@ fn main() {
         let mut dict_file = fs::File::open(matches.value_of("DICT").unwrap()).unwrap();
         let mut matrix_file = fs::File::open(matches.value_of("MATRIX").unwrap()).unwrap();
         let mut output_file = fs::File::create(matches.value_of("OUTPUT").unwrap()).unwrap();
-        let cfg = namaco::parser::DictCfg {
-            surface: 0,
-            lid: 1,
-            rid: 2,
-            cost: 3,
-        };
-        let morph = namaco::Morph::from_text(&mut matrix_file, &mut dict_file, &cfg, |arr| arr.join(",")).unwrap();
+        let morph = namaco::Morph::from_text(
+            &mut matrix_file,
+            &mut dict_file,
+            |arr| (
+                arr[0].as_bytes().to_vec(),
+                namaco::parser::Word {
+                    info: arr.join(","),
+                    lid: arr[1].parse().unwrap(),
+                    rid: arr[2].parse().unwrap(),
+                    cost: arr[3].parse().unwrap(),
+                }
+            )
+        ).unwrap();
         morph.export(&mut output_file).unwrap();
     }
     else if let Some(matches) = matches.subcommand_matches("repl") {
