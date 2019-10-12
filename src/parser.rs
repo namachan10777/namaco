@@ -112,27 +112,27 @@ mod test_parser {
             cost: 3,
         };
         let result: trie::Trie<Word<String>> =
-            build_trie(csv.as_bytes(), &cfg, |arr| arr[4].trim().to_string()).unwrap();
+            build_trie(csv.as_bytes(), &cfg, |arr| String::from(arr[4].trim())).unwrap();
         assert_eq!(result.find("蟹".as_bytes()),
             Ok(&[Word {
                 lid: 0,
                 rid: 10,
                 cost: 100,
-                info: "カニ".to_string(),
+                info: String::from("カニ"),
             }][..]));
         assert_eq!(result.find("土".as_bytes()),
             Ok(&[Word {
                 lid: 1,
                 rid: 20,
                 cost: 200,
-                info: "ツチ".to_string(),
+                info: String::from("ツチ"),
             }][..]));
         assert_eq!(result.find("味".as_bytes()),
             Ok(&[Word {
                 lid: 2,
                 rid: 30,
                 cost: 300,
-                info: "アジ".to_string(),
+                info: String::from("アジ"),
             }][..]));
     }
 }

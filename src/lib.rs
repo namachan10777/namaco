@@ -140,7 +140,13 @@ mod test_morph {
             rid: 2,
             cost: 3,
         };
-        let morph = Morph::from_text(&mut Cursor::new(matrix_src.as_bytes()), &mut Cursor::new(dict_src.as_bytes()), &cfg, |arr| arr[4].trim().to_string()).unwrap();
+        let morph =
+            Morph::from_text(
+                &mut Cursor::new(matrix_src.as_bytes()),
+                &mut Cursor::new(dict_src.as_bytes()),
+                &cfg,
+                |arr| String::from(arr[4].trim())
+            ).unwrap();
         let mut bytes = Vec::new();
         morph.export(&mut bytes).unwrap();
         let restored = Morph::import(&mut Cursor::new(bytes)).unwrap();
@@ -150,7 +156,7 @@ mod test_morph {
                 lid: 0,
                 rid: 10,
                 cost: 100,
-                info: "カニ".to_string(),
+                info: String::from("カニ"),
             }][..]));
         assert_eq!(
             restored.trie.find("土".as_bytes()),
@@ -158,7 +164,7 @@ mod test_morph {
                 lid: 1,
                 rid: 20,
                 cost: 200,
-                info: "ツチ".to_string(),
+                info: String::from("ツチ"),
             }][..]));
         assert_eq!(
             restored.trie.find("味".as_bytes()),
@@ -166,7 +172,7 @@ mod test_morph {
                 lid: 2,
                 rid: 30,
                 cost: 300,
-                info: "アジ".to_string(),
+                info: String::from("アジ"),
             }][..]));
         assert_eq!(restored.matrix.at(0, 1), 121);
         assert_eq!(restored.matrix.at(2, 1), -54);
@@ -208,13 +214,13 @@ mod test_morph {
         };
         let morph =
             Morph::from_text(&mut Cursor::new(matrix_src.as_bytes()), &mut Cursor::new(dict_src.as_bytes()), &cfg,
-                |arr| arr[4].trim().to_string()
+                |arr| String::from(arr[4].trim())
             ).unwrap();
         assert_eq!(morph.parse("東京都に住む".as_bytes()), Some(vec![
-            "東京・名詞・トウキョウ".to_string(),
-            "都・接尾辞・ト".to_string(),
-            "に・助詞・ニ".to_string(),
-            "住む・動詞・スム".to_string(),
+            String::from("東京・名詞・トウキョウ"),
+            String::from("都・接尾辞・ト"),
+            String::from("に・助詞・ニ"),
+            String::from("住む・動詞・スム"),
         ]));
     }
 }

@@ -684,29 +684,29 @@ mod test_add_find {
     #[test]
     fn test_add_find() {
         let mut trie: Trie<String> = Trie::new();
-        trie.add(&[2, 1], "21".to_string()).unwrap();
-        trie.add(&[1, 1], "11".to_string()).unwrap();
-        trie.add(&[1, 2, 3], "123".to_string()).unwrap();
-        trie.add(&[0], "0".to_string()).unwrap();
-        trie.add(&[0, 0], "00".to_string()).unwrap();
-        trie.add(&[1, 2], "12".to_string()).unwrap();
-        trie.add(&[1, 2, 0], "120".to_string()).unwrap();
-        trie.add(&[3, 1, 3], "313".to_string()).unwrap();
-        trie.add(&[1, 6, 1], "161".to_string()).unwrap();
-        trie.add(&[0, 1], "01".to_string()).unwrap();
-        trie.add(&[2, 0], "20".to_string()).unwrap();
+        trie.add(&[2, 1], String::from("21")).unwrap();
+        trie.add(&[1, 1], String::from("11")).unwrap();
+        trie.add(&[1, 2, 3], String::from("123")).unwrap();
+        trie.add(&[0], String::from("0")).unwrap();
+        trie.add(&[0, 0], String::from("00")).unwrap();
+        trie.add(&[1, 2], String::from("12")).unwrap();
+        trie.add(&[1, 2, 0], String::from("120")).unwrap();
+        trie.add(&[3, 1, 3], String::from("313")).unwrap();
+        trie.add(&[1, 6, 1], String::from("161")).unwrap();
+        trie.add(&[0, 1], String::from("01")).unwrap();
+        trie.add(&[2, 0], String::from("20")).unwrap();
 
-        assert_eq!(trie.find(&[0]), Ok(&["0".to_string()][..]));
-        assert_eq!(trie.find(&[0]), Ok(&["0".to_string()][..]));
-        assert_eq!(trie.find(&[0, 0]), Ok(&["00".to_string()][..]));
-        assert_eq!(trie.find(&[1, 2, 3]), Ok(&["123".to_string()][..]));
-        assert_eq!(trie.find(&[1, 2]), Ok(&["12".to_string()][..]));
-        assert_eq!(trie.find(&[1, 2, 0]), Ok(&["120".to_string()][..]));
-        assert_eq!(trie.find(&[3, 1, 3]), Ok(&["313".to_string()][..]));
-        assert_eq!(trie.find(&[1, 6, 1]), Ok(&["161".to_string()][..]));
-        assert_eq!(trie.find(&[0, 1]), Ok(&["01".to_string()][..]));
-        assert_eq!(trie.find(&[2, 0]), Ok(&["20".to_string()][..]));
-        assert_eq!(trie.find(&[2, 1]), Ok(&["21".to_string()][..]));
+        assert_eq!(trie.find(&[0]), Ok(&[String::from("0")][..]));
+        assert_eq!(trie.find(&[0]), Ok(&[String::from("0")][..]));
+        assert_eq!(trie.find(&[0, 0]), Ok(&[String::from("00")][..]));
+        assert_eq!(trie.find(&[1, 2, 3]), Ok(&[String::from("123")][..]));
+        assert_eq!(trie.find(&[1, 2]), Ok(&[String::from("12")][..]));
+        assert_eq!(trie.find(&[1, 2, 0]), Ok(&[String::from("120")][..]));
+        assert_eq!(trie.find(&[3, 1, 3]), Ok(&[String::from("313")][..]));
+        assert_eq!(trie.find(&[1, 6, 1]), Ok(&[String::from("161")][..]));
+        assert_eq!(trie.find(&[0, 1]), Ok(&[String::from("01")][..]));
+        assert_eq!(trie.find(&[2, 0]), Ok(&[String::from("20")][..]));
+        assert_eq!(trie.find(&[2, 1]), Ok(&[String::from("21")][..]));
         assert_eq!(trie.find(&[1]), Err(()));
         assert_eq!(trie.find(&[7, 4]), Err(()));
     }
@@ -714,35 +714,35 @@ mod test_add_find {
     #[test]
     fn test_add() {
         let mut trie: Trie<String> = Trie::new();
-        trie.add("張り込め".as_bytes(), "張り込め".to_string()).unwrap();
-        trie.add("ニッカーボッカー".as_bytes(), "ニッカーボッカー".to_string()).unwrap();
-        trie.add("証城寺".as_bytes(), "証城寺".to_string()).unwrap();
-        trie.add("差し昇っ".as_bytes(), "差し登っ".to_string()).unwrap();
-        trie.add("抜け出せれ".as_bytes(), "抜け出せれ".to_string()).unwrap();
-        trie.add("たい".as_bytes(), "たい".to_string()).unwrap();
-        trie.add("アオガエル".as_bytes(), "アオガエル".to_string()).unwrap();
-        trie.add("長府浜浦".as_bytes(), "長府浜浦".to_string()).unwrap();
-        trie.add("中佃".as_bytes(), "中佃".to_string()).unwrap();
-        trie.add("幻視".as_bytes(), "幻視".to_string()).unwrap();
-        trie.add("小船木".as_bytes(), "小船木".to_string()).unwrap();
-        trie.add("浅黒かれ".as_bytes(), "浅黒かれ".to_string()).unwrap();
-        trie.add("扁かろ".as_bytes(), "扁かろ".to_string()).unwrap();
-        trie.add("咲き乱れ".as_bytes(), "咲き乱れ".to_string()).unwrap();
+        trie.add("張り込め".as_bytes(), String::from("張り込め")).unwrap();
+        trie.add("ニッカーボッカー".as_bytes(), String::from("ニッカーボッカー")).unwrap();
+        trie.add("証城寺".as_bytes(), String::from("証城寺")).unwrap();
+        trie.add("差し昇っ".as_bytes(), String::from("差し登っ")).unwrap();
+        trie.add("抜け出せれ".as_bytes(), String::from("抜け出せれ")).unwrap();
+        trie.add("たい".as_bytes(), String::from("たい")).unwrap();
+        trie.add("アオガエル".as_bytes(), String::from("アオガエル")).unwrap();
+        trie.add("長府浜浦".as_bytes(), String::from("長府浜浦")).unwrap();
+        trie.add("中佃".as_bytes(), String::from("中佃")).unwrap();
+        trie.add("幻視".as_bytes(), String::from("幻視")).unwrap();
+        trie.add("小船木".as_bytes(), String::from("小船木")).unwrap();
+        trie.add("浅黒かれ".as_bytes(), String::from("浅黒かれ")).unwrap();
+        trie.add("扁かろ".as_bytes(), String::from("扁かろ")).unwrap();
+        trie.add("咲き乱れ".as_bytes(), String::from("咲き乱れ")).unwrap();
 
-        assert_eq!(trie.find("張り込め".as_bytes()), Ok(&["張り込め".to_string()][..]));
-        assert_eq!(trie.find("ニッカーボッカー".as_bytes()), Ok(&["ニッカーボッカー".to_string()][..]));
-        assert_eq!(trie.find("証城寺".as_bytes()), Ok(&["証城寺".to_string()][..]));
-        assert_eq!(trie.find("差し昇っ".as_bytes()), Ok(&["差し登っ".to_string()][..]));
-        assert_eq!(trie.find("抜け出せれ".as_bytes()), Ok(&["抜け出せれ".to_string()][..]));
-        assert_eq!(trie.find("たい".as_bytes()), Ok(&["たい".to_string()][..]));
-        assert_eq!(trie.find("アオガエル".as_bytes()), Ok(&["アオガエル".to_string()][..]));
-        assert_eq!(trie.find("長府浜浦".as_bytes()), Ok(&["長府浜浦".to_string()][..]));
-        assert_eq!(trie.find("中佃".as_bytes()), Ok(&["中佃".to_string()][..]));
-        assert_eq!(trie.find("幻視".as_bytes()), Ok(&["幻視".to_string()][..]));
-        assert_eq!(trie.find("小船木".as_bytes()), Ok(&["小船木".to_string()][..]));
-        assert_eq!(trie.find("浅黒かれ".as_bytes()), Ok(&["浅黒かれ".to_string()][..]));
-        assert_eq!(trie.find("扁かろ".as_bytes()), Ok(&["扁かろ".to_string()][..]));
-        assert_eq!(trie.find("咲き乱れ".as_bytes()), Ok(&["咲き乱れ".to_string()][..]));
+        assert_eq!(trie.find("張り込め".as_bytes()), Ok(&[String::from("張り込め")][..]));
+        assert_eq!(trie.find("ニッカーボッカー".as_bytes()), Ok(&[String::from("ニッカーボッカー")][..]));
+        assert_eq!(trie.find("証城寺".as_bytes()), Ok(&[String::from("証城寺")][..]));
+        assert_eq!(trie.find("差し昇っ".as_bytes()), Ok(&[String::from("差し登っ")][..]));
+        assert_eq!(trie.find("抜け出せれ".as_bytes()), Ok(&[String::from("抜け出せれ")][..]));
+        assert_eq!(trie.find("たい".as_bytes()), Ok(&[String::from("たい")][..]));
+        assert_eq!(trie.find("アオガエル".as_bytes()), Ok(&[String::from("アオガエル")][..]));
+        assert_eq!(trie.find("長府浜浦".as_bytes()), Ok(&[String::from("長府浜浦")][..]));
+        assert_eq!(trie.find("中佃".as_bytes()), Ok(&[String::from("中佃")][..]));
+        assert_eq!(trie.find("幻視".as_bytes()), Ok(&[String::from("幻視")][..]));
+        assert_eq!(trie.find("小船木".as_bytes()), Ok(&[String::from("小船木")][..]));
+        assert_eq!(trie.find("浅黒かれ".as_bytes()), Ok(&[String::from("浅黒かれ")][..]));
+        assert_eq!(trie.find("扁かろ".as_bytes()), Ok(&[String::from("扁かろ")][..]));
+        assert_eq!(trie.find("咲き乱れ".as_bytes()), Ok(&[String::from("咲き乱れ")][..]));
     }
 }
 
@@ -889,39 +889,39 @@ mod test_static_construction {
     #[test]
     fn test_add_static() {
         let trie = Trie::static_construction(&mut vec![
-            ("咲き乱れ".as_bytes(), "咲き乱れ".to_string()),
-            ("張り込め".as_bytes(), "張り込め".to_string()),
-            ("1".as_bytes(), "1".to_string()),
-            ("1月".as_bytes(), "1月".to_string()),
-            ("幻視".as_bytes(), "幻視".to_string()),
-            ("アオガエル".as_bytes(), "アオガエル".to_string()),
-            ("扁かろ".as_bytes(), "扁かろ".to_string()),
-            ("証城寺".as_bytes(), "証城寺".to_string()),
-            ("たい".as_bytes(), "たい".to_string()),
-            ("ニッカーボッカー".as_bytes(), "ニッカーボッカー".to_string()),
-            ("抜け出せれ".as_bytes(), "抜け出せれ".to_string()),
-            ("長府浜浦".as_bytes(), "長府浜浦".to_string()),
-            ("中佃".as_bytes(), "中佃".to_string()),
-            ("小船木".as_bytes(), "小船木".to_string()),
-            ("差し昇っ".as_bytes(), "差し登っ".to_string()),
-            ("浅黒かれ".as_bytes(), "浅黒かれ".to_string()),
+            ("咲き乱れ".as_bytes(), String::from("咲き乱れ")),
+            ("張り込め".as_bytes(), String::from("張り込め")),
+            ("1".as_bytes(), String::from("1")),
+            ("1月".as_bytes(), String::from("1月")),
+            ("幻視".as_bytes(), String::from("幻視")),
+            ("アオガエル".as_bytes(), String::from("アオガエル")),
+            ("扁かろ".as_bytes(), String::from("扁かろ")),
+            ("証城寺".as_bytes(), String::from("証城寺")),
+            ("たい".as_bytes(), String::from("たい")),
+            ("ニッカーボッカー".as_bytes(), String::from("ニッカーボッカー")),
+            ("抜け出せれ".as_bytes(), String::from("抜け出せれ")),
+            ("長府浜浦".as_bytes(), String::from("長府浜浦")),
+            ("中佃".as_bytes(), String::from("中佃")),
+            ("小船木".as_bytes(), String::from("小船木")),
+            ("差し昇っ".as_bytes(), String::from("差し登っ")),
+            ("浅黒かれ".as_bytes(), String::from("浅黒かれ")),
         ]);
 
-        assert_eq!(trie.find("張り込め".as_bytes()), Ok(&["張り込め".to_string()][..]));
-        assert_eq!(trie.find("1".as_bytes()), Ok(&["1".to_string()][..]));
-        assert_eq!(trie.find("1月".as_bytes()), Ok(&["1月".to_string()][..]));
-        assert_eq!(trie.find("ニッカーボッカー".as_bytes()), Ok(&["ニッカーボッカー".to_string()][..]));
-        assert_eq!(trie.find("証城寺".as_bytes()), Ok(&["証城寺".to_string()][..]));
-        assert_eq!(trie.find("差し昇っ".as_bytes()), Ok(&["差し登っ".to_string()][..]));
-        assert_eq!(trie.find("抜け出せれ".as_bytes()), Ok(&["抜け出せれ".to_string()][..]));
-        assert_eq!(trie.find("たい".as_bytes()), Ok(&["たい".to_string()][..]));
-        assert_eq!(trie.find("アオガエル".as_bytes()), Ok(&["アオガエル".to_string()][..]));
-        assert_eq!(trie.find("長府浜浦".as_bytes()), Ok(&["長府浜浦".to_string()][..]));
-        assert_eq!(trie.find("中佃".as_bytes()), Ok(&["中佃".to_string()][..]));
-        assert_eq!(trie.find("幻視".as_bytes()), Ok(&["幻視".to_string()][..]));
-        assert_eq!(trie.find("小船木".as_bytes()), Ok(&["小船木".to_string()][..]));
-        assert_eq!(trie.find("浅黒かれ".as_bytes()), Ok(&["浅黒かれ".to_string()][..]));
-        assert_eq!(trie.find("扁かろ".as_bytes()), Ok(&["扁かろ".to_string()][..]));
-        assert_eq!(trie.find("咲き乱れ".as_bytes()), Ok(&["咲き乱れ".to_string()][..]));
+        assert_eq!(trie.find("張り込め".as_bytes()), Ok(&[String::from("張り込め")][..]));
+        assert_eq!(trie.find("1".as_bytes()), Ok(&[String::from("1")][..]));
+        assert_eq!(trie.find("1月".as_bytes()), Ok(&[String::from("1月")][..]));
+        assert_eq!(trie.find("ニッカーボッカー".as_bytes()), Ok(&[String::from("ニッカーボッカー")][..]));
+        assert_eq!(trie.find("証城寺".as_bytes()), Ok(&[String::from("証城寺")][..]));
+        assert_eq!(trie.find("差し昇っ".as_bytes()), Ok(&[String::from("差し登っ")][..]));
+        assert_eq!(trie.find("抜け出せれ".as_bytes()), Ok(&[String::from("抜け出せれ")][..]));
+        assert_eq!(trie.find("たい".as_bytes()), Ok(&[String::from("たい")][..]));
+        assert_eq!(trie.find("アオガエル".as_bytes()), Ok(&[String::from("アオガエル")][..]));
+        assert_eq!(trie.find("長府浜浦".as_bytes()), Ok(&[String::from("長府浜浦")][..]));
+        assert_eq!(trie.find("中佃".as_bytes()), Ok(&[String::from("中佃")][..]));
+        assert_eq!(trie.find("幻視".as_bytes()), Ok(&[String::from("幻視")][..]));
+        assert_eq!(trie.find("小船木".as_bytes()), Ok(&[String::from("小船木")][..]));
+        assert_eq!(trie.find("浅黒かれ".as_bytes()), Ok(&[String::from("浅黒かれ")][..]));
+        assert_eq!(trie.find("扁かろ".as_bytes()), Ok(&[String::from("扁かろ")][..]));
+        assert_eq!(trie.find("咲き乱れ".as_bytes()), Ok(&[String::from("咲き乱れ")][..]));
     }
 }
