@@ -10,6 +10,7 @@ clap = "*"
 serde = "*"
 serde_derive = "*"
 bincode = "*"
+failure = "*"
 
 [profile.bench]
 debug = true

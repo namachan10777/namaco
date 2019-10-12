@@ -1,5 +1,26 @@
 use serde_derive::{Serialize, Deserialize};
 
+#[derive(Fail, Debug)]
+pub enum MatrixLoadError {
+    #[fail(display = "failed to parse line at {}", line)]
+    FailedToParseLine {
+        line: usize,
+    },
+    #[fail(display = "failed to read line at {}", line)]
+    FailedToReadLine {
+        line: usize,
+    },
+    #[fail(display = "invalid header at {} ", line)]
+    InvalidHeader {
+        line: usize,
+    },
+    #[fail(display = "invalid column at {} ", line)]
+    InvalidColumn {
+        line: usize,
+    },
+
+}
+
 #[derive(Serialize, Deserialize)]
 pub struct Matrix {
     internal: Vec<i32>,
@@ -11,25 +32,39 @@ use std::io;
 
 impl Matrix {
     #[allow(dead_code)]
-    pub fn new<R: Read>(file: &mut R) -> Result<Matrix, io::Error> {
+    pub fn new<R: Read>(file: &mut R) -> Result<Matrix, MatrixLoadError> {
         let mut reader = io::BufReader::new(file);
         let mut internal = Vec::new();
         let mut buf = String::new();
-        reader.read_line(&mut buf)?;
+        let mut line_cnt = 1usize;
+
+        reader.read_line(&mut buf).map_err(|_| MatrixLoadError::FailedToReadLine { line: line_cnt })?;
         let splited_line: Vec<&str> = buf.trim().split(' ').collect();
-        let lsize: usize = splited_line[0].parse().unwrap();
-        let rsize: usize = splited_line[1].parse().unwrap();
+        if splited_line.len() != 2 {
+            return Err(MatrixLoadError::InvalidHeader { line: line_cnt });
+        }
+        let lsize: usize = splited_line[0].parse().map_err(|_| MatrixLoadError::FailedToParseLine { line: line_cnt })?;
+        let rsize: usize = splited_line[1].parse().map_err(|_| MatrixLoadError::FailedToParseLine { line: line_cnt })?;
+
         internal.resize(lsize * rsize, std::i32::MAX);
 
         loop{
+            line_cnt += 1;
             buf.clear();
-            if reader.read_line(&mut buf)? == 0 {
+            if reader.read_line(&mut buf).map_err(|_| MatrixLoadError::FailedToReadLine { line: line_cnt })? == 0 {
                 break;
             }
             let splited_line: Vec<&str> = buf.trim().split(' ').collect();
-            let lid: usize  = splited_line[0].parse().unwrap();
-            let rid: usize  = splited_line[1].parse().unwrap();
-            let cost: i32 = splited_line[2].parse().unwrap();
+            if splited_line.len() != 3 {
+                return Err(MatrixLoadError::InvalidColumn { line: line_cnt });
+            }
+            let lid: usize  = splited_line[0].parse().map_err(|_| MatrixLoadError::FailedToParseLine { line: line_cnt })?;
+            let rid: usize  = splited_line[1].parse().map_err(|_| MatrixLoadError::FailedToParseLine { line: line_cnt })?;
+            let cost: i32 = splited_line[2].parse().map_err(|_| MatrixLoadError::FailedToParseLine { line: line_cnt })?;
+
+            if lid >= lsize || rid >= rsize {
+                return Err(MatrixLoadError::InvalidColumn { line: line_cnt });
+            }
 
             internal[lid * rsize + rid] = cost;
         }

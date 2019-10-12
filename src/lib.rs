@@ -8,6 +8,8 @@ use std::usize;
 use serde::{Serialize};
 use serde::de::DeserializeOwned;
 use serde_derive::{Serialize, Deserialize};
+#[macro_use]
+extern crate failure;
 
 pub use self::parser::Word as Word;
 
@@ -23,7 +25,7 @@ impl<T: Serialize + DeserializeOwned + Clone + Debug> Morph<T> {
     pub fn from_text<R: Read, F>(matrix_src: &mut R, dict_src: &mut R, dict_cfg: &parser::DictCfg, classifier: F) -> Result<Self, io::Error> 
         where F: Fn(&[&str]) -> T {
         let trie = parser::build_trie(dict_src, dict_cfg, classifier)?;
-        let matrix = matrix::Matrix::new(matrix_src)?;
+        let matrix = matrix::Matrix::new(matrix_src).unwrap();
         Ok(Morph { trie, matrix })
     }
 
