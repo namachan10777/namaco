@@ -61,7 +61,6 @@ mod test_split_by_comma {
     }
 }
 
-#[allow(dead_code)]
 pub fn parse_line<F, T: Clone>(cfg: &DictCfg, classifier: F, line: &str) -> (Vec<u8>, Word<T>)
     where F: Fn(&[&str]) -> T
 {
@@ -85,7 +84,6 @@ use std::io::{BufRead, Read};
 use super::trie;
 use core::fmt::Debug;
 
-#[allow(dead_code)]
 pub fn build_trie<R: Read, F, T: Serialize + Clone + Debug>(readable: R, cfg: &DictCfg, classifier: F) -> Result<trie::Trie<Word<T>>, io::Error>
     where F: Fn(&[&str]) -> T
 {

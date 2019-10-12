@@ -1,7 +1,5 @@
 // copyright (c) 2019 Nakano Masaki <namachan10777@gmail>
 use std::usize;
-use crypto::sha2::Sha256;
-use crypto::digest::Digest;
 use serde_derive::{Serialize, Deserialize};
 use serde::{Serialize};
 
@@ -18,7 +16,6 @@ impl Default for Node {
 }
 
 impl Node {
-    #[allow(dead_code)]
     fn root(base: usize) -> Self {
         Node::from(DecodedNode::Root(base))
     }
@@ -27,8 +24,8 @@ impl Node {
         Node::from(DecodedNode::Term(check, id))
     }
 
-    
-    #[allow(dead_code)] // used in test
+    // for test
+    #[allow(dead_code)]
     fn sec(check: usize, base: usize, id: Option<usize>) -> Self {
         Node::from(DecodedNode::Sec(check, base, id))
     }
@@ -180,7 +177,6 @@ const ROW_LEN: usize = 256;
 type Row = [Node; ROW_LEN];
 
 impl<T: Serialize> Trie<T> {
-    #[allow(dead_code)]
     pub fn new() -> Trie<T> {
         let mut tree = vec![Node::blank(); 256];
         tree[0] = Node::root(0);
@@ -211,49 +207,6 @@ impl<T: Serialize> Trie<T> {
             octet_count += 1;
         }
         Ok(here)
-    }
-
-    fn pp_dot_impl(&self, parent_digest: &str, current_idx: usize) -> String {
-        let mut buf = String::new();
-        let current = self.tree[current_idx];
-        if current.base != NO_CHILD {
-            for i in 0..256 {
-                let child_idx = current.base ^ i;
-                let child = self.tree[child_idx];
-                if child.check == current_idx {
-                    let mut sha256 = Sha256::new();
-                    let child_str = format!("{}:{:?}", child_idx, Into::<DecodedNode>::into(child));
-                    sha256.input(child_str.as_bytes());
-                    let digest = format!("node{}", sha256.result_str());
-                    buf.push_str(&format!("{} [label=\"{}\"];\n", &digest, child_str));
-                    buf.push_str(&format!("{} -> {} [label=\"{}\"];\n", parent_digest, &digest, i));
-                    buf.push_str(&self.pp_dot_impl(&digest, child_idx));
-                }
-            }
-        }
-        buf
-    }
-
-    #[allow(dead_code)]
-    fn pp_dot(&self) -> String {
-        let mut buf = String::new();
-        let root = self.tree[0];
-        for i in 0..256 {
-            let child_idx = root.base ^ i;
-            let child = self.tree[child_idx];
-            if child.check == 0 {
-                let mut sha256 = Sha256::new();
-                let child_str = format!("{}:{:?}", child_idx, Into::<DecodedNode>::into(child));
-                sha256.input(child_str.as_bytes());
-                let digest = format!("node{}", sha256.result_str());
-                buf.push_str(&format!("{} [label=\"{}\"];\n", &digest, child_str));
-                buf.push_str(&format!("root -> {} [label=\"{}\"];\n", &digest, i));
-                buf.push_str(&self.pp_dot_impl(&digest, child_idx));
-            }
-        }
-        format!("digraph trie {{\nroot [label=\"{:?}\"];\n{}}}",
-            Into::<DecodedNode>::into(self.tree[0]),
-            buf)
     }
 }
 #[cfg(test)]
@@ -495,11 +448,6 @@ impl<T: Serialize> Trie<T> {
     }
 }
 
-#[allow(dead_code)]
-fn decode(x: &Vec<Node>) -> Vec<DecodedNode> {
-    x.iter().map(|x| Into::<DecodedNode>::into(x.clone())).collect()
-}
-
 #[cfg(test)]
 mod test_paste {
     // TODO improve test case
@@ -544,7 +492,7 @@ mod test_paste {
         let mut ans = vec![Node::blank(); 512];
         ans[0] = Node::root(0);
         ans[1] = Node::sec(0, 0, None);
-        assert_eq!(decode(&trie2.tree), decode(&ans));
+        assert_eq!(&trie2.tree, &ans);
     }
 }
 
@@ -604,7 +552,6 @@ impl<T: Serialize> Trie<T> {
 }
 
 impl<T: Serialize> Trie<T> {
-    #[allow(dead_code)]
     pub fn add(&mut self, way: &[u8], cargo: T) -> Result<(), ()> {
         let mut parent_idx = 0;
         for octet in way {
@@ -655,7 +602,6 @@ impl<T: Serialize> Trie<T> {
 }
 
 impl<T: Serialize> Trie<T> {
-    #[allow(dead_code)]
     pub fn find(&self, way: &[u8]) -> Result<&[T], ()> {
         match self.explore(way) {
             Ok(idx) => {

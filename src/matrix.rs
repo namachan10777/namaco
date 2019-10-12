@@ -31,7 +31,6 @@ use std::io::{Read, BufRead};
 use std::io;
 
 impl Matrix {
-    #[allow(dead_code)]
     pub fn new<R: Read>(file: &mut R) -> Result<Matrix, MatrixLoadError> {
         let mut reader = io::BufReader::new(file);
         let mut internal = Vec::new();
@@ -75,7 +74,6 @@ impl Matrix {
         })
     }
 
-    #[allow(dead_code)]
     pub fn at(&self, lid: usize, rid: usize) -> i32 {
         self.internal[lid * self.rsize + rid]
     }
