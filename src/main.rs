@@ -42,8 +42,7 @@ fn main() {
             rid: 2,
             cost: 3,
         };
-        let meta = fs::metadata(matches.value_of("DICT").unwrap()).unwrap();
-        let morph = namaco::Morph::from_text(&mut matrix_file, &mut dict_file, &cfg, |arr| arr.join(","), Some(meta.len() as usize)).unwrap();
+        let morph = namaco::Morph::from_text(&mut matrix_file, &mut dict_file, &cfg, |arr| arr.join(",")).unwrap();
         morph.export(&mut output_file).unwrap();
     }
     else if let Some(matches) = matches.subcommand_matches("repl") {
