@@ -46,6 +46,9 @@ impl<T: Serialize + DeserializeOwned + Clone + Debug> Morph<T> {
     }
 
     pub fn parse(&self, input: &[u8]) -> Option<Vec<T>> {
+        if input.len() == 0 {
+            return None
+        }
         // dp[p] = (cost, lid, word)
         // p    : position of end of word
         // cost : total cost
