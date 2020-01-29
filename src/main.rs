@@ -29,7 +29,8 @@ fn main() {
                          .required(true)
                          .help("specify output file name")))
         .subcommand(clap::SubCommand::with_name("repl")
-            .arg(clap::Arg::with_name("DICT"))
+            .arg(clap::Arg::with_name("DICT")
+                .required(true))
             .help("pass compiled dictionary"))
         .get_matches();
     if let Some(matches) = matches.subcommand_matches("compile") {
