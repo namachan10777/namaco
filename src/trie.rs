@@ -1,7 +1,7 @@
 // copyright (c) 2019 Nakano Masaki <namachan10777@gmail>
+use serde::Serialize;
+use serde_derive::{Deserialize, Serialize};
 use std::usize;
-use serde_derive::{Serialize, Deserialize};
-use serde::{Serialize};
 
 #[derive(Clone, PartialEq, Debug, Copy, Serialize, Deserialize)]
 struct Node {
@@ -19,7 +19,7 @@ impl Node {
     fn root(base: usize) -> Self {
         Node::from(DecodedNode::Root(base))
     }
-    
+
     fn term(check: usize, id: usize) -> Self {
         Node::from(DecodedNode::Term(check, id))
     }
@@ -31,11 +31,7 @@ impl Node {
     }
 
     fn node(check: usize, base: usize, id: usize) -> Self {
-        Node {
-            check,
-            base,
-            id,
-        }
+        Node { check, base, id }
     }
 
     fn blank() -> Self {
@@ -68,19 +64,15 @@ impl Into<DecodedNode> for Node {
         if self.check == NO_PARENT {
             if self.base == NO_CHILD {
                 DecodedNode::Blank
-            }
-            else {
+            } else {
                 DecodedNode::Root(self.base)
             }
-        }
-        else if self.base == NO_CHILD {
+        } else if self.base == NO_CHILD {
             DecodedNode::Term(self.check, self.id)
-        }
-        else {
+        } else {
             if self.id == NO_ITEM {
                 DecodedNode::Sec(self.check, self.base, None)
-            }
-            else {
+            } else {
                 DecodedNode::Sec(self.check, self.base, Some(self.id))
             }
         }
@@ -114,7 +106,7 @@ impl From<DecodedNode> for Node {
                 base: NO_CHILD,
                 check: NO_PARENT,
                 id: NO_ITEM,
-            }
+            },
         }
     }
 }
@@ -155,11 +147,23 @@ mod node_test {
         assert_eq!(Node::from(term_decoded.clone()), term_raw);
         assert_eq!(Into::<DecodedNode>::into(term_raw), term_decoded);
 
-        assert_eq!(Node::from(sec_no_property_decoded.clone()), sec_no_property_raw);
-        assert_eq!(Into::<DecodedNode>::into(sec_no_property_raw), sec_no_property_decoded);
+        assert_eq!(
+            Node::from(sec_no_property_decoded.clone()),
+            sec_no_property_raw
+        );
+        assert_eq!(
+            Into::<DecodedNode>::into(sec_no_property_raw),
+            sec_no_property_decoded
+        );
 
-        assert_eq!(Node::from(sec_has_property_decoded.clone()), sec_has_property_raw);
-        assert_eq!(Into::<DecodedNode>::into(sec_has_property_raw), sec_has_property_decoded);
+        assert_eq!(
+            Node::from(sec_has_property_decoded.clone()),
+            sec_has_property_raw
+        );
+        assert_eq!(
+            Into::<DecodedNode>::into(sec_has_property_raw),
+            sec_has_property_decoded
+        );
     }
 }
 
@@ -181,7 +185,7 @@ impl<T: Serialize> Trie<T> {
         let mut tree = vec![Node::blank(); 256];
         tree[0] = Node::root(0);
         Trie {
-            cache: vec![0;256],
+            cache: vec![0; 256],
             capacities: vec![254],
             tree,
             storage: Vec::new(),
@@ -198,11 +202,11 @@ impl<T: Serialize> Trie<T> {
         for octet in way {
             let check = here;
             if self.tree[here].base == NO_CHILD {
-                return Err((octet_count, check))
+                return Err((octet_count, check));
             }
             here = self.tree[here].base ^ (*octet as usize);
             if self.tree[here].check != check {
-                return Err((octet_count, check))
+                return Err((octet_count, check));
             }
             octet_count += 1;
         }
@@ -210,7 +214,7 @@ impl<T: Serialize> Trie<T> {
     }
 }
 #[cfg(test)]
-mod test_explore { 
+mod test_explore {
     use super::*;
     #[test]
     fn test_explore() {
@@ -229,7 +233,7 @@ mod test_explore {
         tree[7] = Node::sec(2, 4, Some(3));
         tree[5] = Node::term(7, 4);
         let trie = Trie {
-            cache: vec![0;256],
+            cache: vec![0; 256],
             capacities: vec![249, 255],
             tree,
             storage: Vec::new() as Vec<Vec<String>>,
@@ -254,10 +258,13 @@ impl<T: Serialize> Trie<T> {
                 for innser_offset in 0..256 {
                     let mut safe = true;
                     let offset = (block_idx << 8) | innser_offset;
-                    for target_idx in 0..256 {   
-                        if target[target_idx] && DecodedNode::Blank != Into::<DecodedNode>::into(self.tree[offset ^ target_idx].clone()) {
-                            safe = false; 
-                            break;                   
+                    for target_idx in 0..256 {
+                        if target[target_idx]
+                            && DecodedNode::Blank
+                                != Into::<DecodedNode>::into(self.tree[offset ^ target_idx].clone())
+                        {
+                            safe = false;
+                            break;
                         }
                     }
                     if safe {
@@ -288,22 +295,22 @@ mod test_reallocate_base {
         let mut tree = vec![Node::term(0, 0); 512];
         tree[6] = Node::blank();
         let mut trie: Trie<String> = Trie {
-            cache: vec![0;256],
+            cache: vec![0; 256],
             capacities: vec![1, 0],
             tree,
             storage: Vec::new(),
         };
-        assert_eq!(trie.reallocate_base(&mask, 1), 0^6);
+        assert_eq!(trie.reallocate_base(&mask, 1), 0 ^ 6);
 
         mask[0] = false;
         mask[47] = true;
-        assert_eq!(trie.reallocate_base(&mask, 1), 6^47);
+        assert_eq!(trie.reallocate_base(&mask, 1), 6 ^ 47);
 
         mask[47] = true;
         mask[99] = true;
         trie.tree = vec![Node::blank(); 512];
         trie.tree[47] = Node::term(0, 0);
-        trie.tree[1^99] = Node::term(0, 0);
+        trie.tree[1 ^ 99] = Node::term(0, 0);
         trie.capacities = vec![253, 255];
         assert_eq!(trie.reallocate_base(&mask, 2), 2);
 
@@ -360,40 +367,40 @@ impl<T: Serialize> Trie<T> {
 mod test_read_erase_row {
     use super::*;
     #[test]
-    fn test_read () {
+    fn test_read() {
         let mut tree = [Node::blank(); 512].to_vec();
         tree[0] = Node::root(0);
         tree[1] = Node::sec(0, 64, None);
         tree[2] = Node::term(0, 0);
         tree[64] = Node::term(1, 0);
         let trie: Trie<String> = Trie {
-            cache: vec![0;256],
+            cache: vec![0; 256],
             capacities: vec![251, 255],
             tree,
             storage: Vec::new(),
         };
 
         let row1 = trie.read_row(0).to_vec();
-        let mut row1_ans = vec![Node::blank();256];
+        let mut row1_ans = vec![Node::blank(); 256];
         row1_ans[1] = Node::sec(0, 64, None);
         row1_ans[2] = Node::term(0, 0);
         assert_eq!(row1, row1_ans);
 
         let row2 = trie.read_row(1).to_vec();
-        let mut row2_ans = vec![Node::blank();256];
+        let mut row2_ans = vec![Node::blank(); 256];
         row2_ans[0] = Node::term(1, 0);
         assert_eq!(row2, row2_ans)
     }
 
     #[test]
-    fn test_erase () {
+    fn test_erase() {
         let mut tree = [Node::blank(); 512].to_vec();
         tree[0] = Node::root(0);
         tree[1] = Node::sec(0, 64, None);
         tree[2] = Node::term(0, 0);
         tree[64] = Node::term(1, 0);
         let mut trie: Trie<String> = Trie {
-            cache: vec![0;256],
+            cache: vec![0; 256],
             capacities: vec![251, 255],
             tree,
             storage: Vec::new(),
@@ -418,7 +425,8 @@ impl<T: Serialize> Trie<T> {
             if row[i].check != NO_PARENT
                 || row[i].base != NO_CHILD
                 || addition[i].check != NO_PARENT
-                || addition[i].base != NO_CHILD {
+                || addition[i].base != NO_CHILD
+            {
                 mask[i] = true;
                 cnt += 1;
             }
@@ -457,19 +465,19 @@ mod test_paste {
         let mut tree = vec![Node::blank(); 512];
         tree[0] = Node::root(0);
         tree[64] = Node::term(5, 0);
-        
+
         let mut row = [Node::blank(); 256];
         row[1] = Node::sec(0, 64, None);
         row[2] = Node::term(1, 0);
 
         let mut trie: Trie<String> = Trie {
-            cache: vec![0;256],
+            cache: vec![0; 256],
             capacities: vec![253, 255],
             tree,
             storage: Vec::new(),
         };
 
-        assert_eq!(trie.paste(row, [Node::default();256], 4), 0);
+        assert_eq!(trie.paste(row, [Node::default(); 256], 4), 0);
         let mut ans = vec![Node::blank(); 512];
         ans[0] = Node::root(0);
         ans[64] = Node::term(1, 0);
@@ -481,7 +489,7 @@ mod test_paste {
         let mut tree2 = vec![Node::blank(); 512];
         tree2[0] = Node::root(0);
         let mut trie2: Trie<String> = Trie {
-            cache: vec![0;256],
+            cache: vec![0; 256],
             capacities: vec![251, 255],
             tree: tree2,
             storage: Vec::new(),
@@ -504,16 +512,14 @@ impl<T: Serialize> Trie<T> {
         if target.check == NO_PARENT {
             if target.base == NO_CHILD {
                 return target_idx;
-            }
-            else {
+            } else {
                 unreachable!();
             }
         }
 
         let old_base = if parent.check < self.tree.len() {
             self.tree[parent.check].base
-        }
-        else {
+        } else {
             NO_CHILD
         };
         let row = self.read_row(target.check);
@@ -532,8 +538,7 @@ impl<T: Serialize> Trie<T> {
             // (old_base ^ parent_idx) ^ new_base: new absolute position
             // A ^ B = C ⇒ C ^ A = B ∩ C ^ B = A
             self.tree[target_idx] = Node::term(old_base ^ parent_idx ^ new_base, NO_ITEM);
-        }
-        else {
+        } else {
             self.tree[target_idx] = Node::term(parent_idx, NO_ITEM);
         }
         target_idx
@@ -569,34 +574,29 @@ impl<T: Serialize> Trie<T> {
                 else {
                     parent_idx = self.insert_by_slide_brothers(child_idx, parent_idx);
                 }
-            }
-            else {
+            } else {
                 if child.check == parent_idx {
                     parent_idx = child_idx;
                 }
                 // conflict case
                 else {
-                    let brother_num  = self.count_children(parent_idx);
+                    let brother_num = self.count_children(parent_idx);
                     let stranger_num = self.count_children(child.check);
-                    parent_idx =
-                        if brother_num > stranger_num {
-                            self.insert_by_push_out(child_idx, parent_idx)
-                        }
-                        else {
-                            self.insert_by_slide_brothers(child_idx, parent_idx)
-                        };
+                    parent_idx = if brother_num > stranger_num {
+                        self.insert_by_push_out(child_idx, parent_idx)
+                    } else {
+                        self.insert_by_slide_brothers(child_idx, parent_idx)
+                    };
                 }
             }
         }
-        self.tree[parent_idx].id =
-            if self.tree[parent_idx].id == NO_ITEM {
-                self.storage.push(vec![cargo]);
-                self.storage.len() - 1
-            }
-            else {
-                self.storage[self.tree[parent_idx].id].push(cargo);
-                self.tree[parent_idx].id
-            };
+        self.tree[parent_idx].id = if self.tree[parent_idx].id == NO_ITEM {
+            self.storage.push(vec![cargo]);
+            self.storage.len() - 1
+        } else {
+            self.storage[self.tree[parent_idx].id].push(cargo);
+            self.tree[parent_idx].id
+        };
         Ok(())
     }
 }
@@ -604,16 +604,14 @@ impl<T: Serialize> Trie<T> {
 impl<T: Serialize> Trie<T> {
     pub fn find(&self, way: &[u8]) -> Result<&[T], ()> {
         match self.explore(way) {
-            Ok(idx) => {
-                match Into::<DecodedNode>::into(self.tree[idx]) {
-                    DecodedNode::Blank => Err(()),
-                    DecodedNode::Root(_) => Err(()),
-                    DecodedNode::Term(_, id) => Ok(&self.storage[id][..]),
-                    DecodedNode::Sec(_, _, Some(id)) => Ok(&self.storage[id][..]),
-                    DecodedNode::Sec(_, _, None) => Err(()),
-                }
+            Ok(idx) => match Into::<DecodedNode>::into(self.tree[idx]) {
+                DecodedNode::Blank => Err(()),
+                DecodedNode::Root(_) => Err(()),
+                DecodedNode::Term(_, id) => Ok(&self.storage[id][..]),
+                DecodedNode::Sec(_, _, Some(id)) => Ok(&self.storage[id][..]),
+                DecodedNode::Sec(_, _, None) => Err(()),
             },
-            Err(_) => Err(())
+            Err(_) => Err(()),
         }
     }
 }
@@ -654,35 +652,91 @@ mod test_add_find {
     #[test]
     fn test_add() {
         let mut trie: Trie<String> = Trie::new();
-        trie.add("張り込め".as_bytes(), String::from("張り込め")).unwrap();
-        trie.add("ニッカーボッカー".as_bytes(), String::from("ニッカーボッカー")).unwrap();
-        trie.add("証城寺".as_bytes(), String::from("証城寺")).unwrap();
-        trie.add("差し昇っ".as_bytes(), String::from("差し登っ")).unwrap();
-        trie.add("抜け出せれ".as_bytes(), String::from("抜け出せれ")).unwrap();
+        trie.add("張り込め".as_bytes(), String::from("張り込め"))
+            .unwrap();
+        trie.add(
+            "ニッカーボッカー".as_bytes(),
+            String::from("ニッカーボッカー"),
+        )
+        .unwrap();
+        trie.add("証城寺".as_bytes(), String::from("証城寺"))
+            .unwrap();
+        trie.add("差し昇っ".as_bytes(), String::from("差し登っ"))
+            .unwrap();
+        trie.add("抜け出せれ".as_bytes(), String::from("抜け出せれ"))
+            .unwrap();
         trie.add("たい".as_bytes(), String::from("たい")).unwrap();
-        trie.add("アオガエル".as_bytes(), String::from("アオガエル")).unwrap();
-        trie.add("長府浜浦".as_bytes(), String::from("長府浜浦")).unwrap();
+        trie.add("アオガエル".as_bytes(), String::from("アオガエル"))
+            .unwrap();
+        trie.add("長府浜浦".as_bytes(), String::from("長府浜浦"))
+            .unwrap();
         trie.add("中佃".as_bytes(), String::from("中佃")).unwrap();
         trie.add("幻視".as_bytes(), String::from("幻視")).unwrap();
-        trie.add("小船木".as_bytes(), String::from("小船木")).unwrap();
-        trie.add("浅黒かれ".as_bytes(), String::from("浅黒かれ")).unwrap();
-        trie.add("扁かろ".as_bytes(), String::from("扁かろ")).unwrap();
-        trie.add("咲き乱れ".as_bytes(), String::from("咲き乱れ")).unwrap();
+        trie.add("小船木".as_bytes(), String::from("小船木"))
+            .unwrap();
+        trie.add("浅黒かれ".as_bytes(), String::from("浅黒かれ"))
+            .unwrap();
+        trie.add("扁かろ".as_bytes(), String::from("扁かろ"))
+            .unwrap();
+        trie.add("咲き乱れ".as_bytes(), String::from("咲き乱れ"))
+            .unwrap();
 
-        assert_eq!(trie.find("張り込め".as_bytes()), Ok(&[String::from("張り込め")][..]));
-        assert_eq!(trie.find("ニッカーボッカー".as_bytes()), Ok(&[String::from("ニッカーボッカー")][..]));
-        assert_eq!(trie.find("証城寺".as_bytes()), Ok(&[String::from("証城寺")][..]));
-        assert_eq!(trie.find("差し昇っ".as_bytes()), Ok(&[String::from("差し登っ")][..]));
-        assert_eq!(trie.find("抜け出せれ".as_bytes()), Ok(&[String::from("抜け出せれ")][..]));
-        assert_eq!(trie.find("たい".as_bytes()), Ok(&[String::from("たい")][..]));
-        assert_eq!(trie.find("アオガエル".as_bytes()), Ok(&[String::from("アオガエル")][..]));
-        assert_eq!(trie.find("長府浜浦".as_bytes()), Ok(&[String::from("長府浜浦")][..]));
-        assert_eq!(trie.find("中佃".as_bytes()), Ok(&[String::from("中佃")][..]));
-        assert_eq!(trie.find("幻視".as_bytes()), Ok(&[String::from("幻視")][..]));
-        assert_eq!(trie.find("小船木".as_bytes()), Ok(&[String::from("小船木")][..]));
-        assert_eq!(trie.find("浅黒かれ".as_bytes()), Ok(&[String::from("浅黒かれ")][..]));
-        assert_eq!(trie.find("扁かろ".as_bytes()), Ok(&[String::from("扁かろ")][..]));
-        assert_eq!(trie.find("咲き乱れ".as_bytes()), Ok(&[String::from("咲き乱れ")][..]));
+        assert_eq!(
+            trie.find("張り込め".as_bytes()),
+            Ok(&[String::from("張り込め")][..])
+        );
+        assert_eq!(
+            trie.find("ニッカーボッカー".as_bytes()),
+            Ok(&[String::from("ニッカーボッカー")][..])
+        );
+        assert_eq!(
+            trie.find("証城寺".as_bytes()),
+            Ok(&[String::from("証城寺")][..])
+        );
+        assert_eq!(
+            trie.find("差し昇っ".as_bytes()),
+            Ok(&[String::from("差し登っ")][..])
+        );
+        assert_eq!(
+            trie.find("抜け出せれ".as_bytes()),
+            Ok(&[String::from("抜け出せれ")][..])
+        );
+        assert_eq!(
+            trie.find("たい".as_bytes()),
+            Ok(&[String::from("たい")][..])
+        );
+        assert_eq!(
+            trie.find("アオガエル".as_bytes()),
+            Ok(&[String::from("アオガエル")][..])
+        );
+        assert_eq!(
+            trie.find("長府浜浦".as_bytes()),
+            Ok(&[String::from("長府浜浦")][..])
+        );
+        assert_eq!(
+            trie.find("中佃".as_bytes()),
+            Ok(&[String::from("中佃")][..])
+        );
+        assert_eq!(
+            trie.find("幻視".as_bytes()),
+            Ok(&[String::from("幻視")][..])
+        );
+        assert_eq!(
+            trie.find("小船木".as_bytes()),
+            Ok(&[String::from("小船木")][..])
+        );
+        assert_eq!(
+            trie.find("浅黒かれ".as_bytes()),
+            Ok(&[String::from("浅黒かれ")][..])
+        );
+        assert_eq!(
+            trie.find("扁かろ".as_bytes()),
+            Ok(&[String::from("扁かろ")][..])
+        );
+        assert_eq!(
+            trie.find("咲き乱れ".as_bytes()),
+            Ok(&[String::from("咲き乱れ")][..])
+        );
     }
 }
 
@@ -692,7 +746,11 @@ impl<T: Serialize + Clone> Trie<T> {
     }
 
     // expect sorted
-    fn get_domain<'a, 'b>(src: &'a [(&'b [u8], T)], select: usize, target: u8) -> &'a [(&'b [u8], T)] {
+    fn get_domain<'a, 'b>(
+        src: &'a [(&'b [u8], T)],
+        select: usize,
+        target: u8,
+    ) -> &'a [(&'b [u8], T)] {
         let mut begin = None;
         let mut end = None;
 
@@ -709,14 +767,14 @@ impl<T: Serialize + Clone> Trie<T> {
         match (begin, end) {
             (Some(begin), Some(end)) => &src[begin..end],
             (Some(begin), None) => &src[begin..],
-            _ => unreachable!()
+            _ => unreachable!(),
         }
     }
 
     pub fn add_static(&mut self, src: &[(&[u8], T)], select: usize, parent_idx: usize) -> usize {
         let mut row = [Node::default(); 256];
         let mut mask = [false; 256];
-        let mut update = [false;256];
+        let mut update = [false; 256];
         let mut before = -1i16;
         let mut cnt = 0u8;
 
@@ -730,13 +788,11 @@ impl<T: Serialize + Clone> Trie<T> {
             if way.len() <= select + 1 {
                 if row[way[select] as usize].id != NO_ITEM {
                     self.storage[row[way[select] as usize].id as usize].push(cargo.clone());
-                }
-                else {
+                } else {
                     self.storage.push(vec![cargo.clone()]);
                     row[way[select] as usize].id = self.storage.len() - 1;
                 }
-            }
-            else {
+            } else {
                 update[way[select] as usize] = true;
             }
         }
@@ -750,7 +806,8 @@ impl<T: Serialize + Clone> Trie<T> {
         for i in 0..256 {
             if update[i] {
                 let idx = i ^ base;
-                self.tree[idx].base = self.add_static(Self::get_domain(src, select, i as u8), select+1, idx);
+                self.tree[idx].base =
+                    self.add_static(Self::get_domain(src, select, i as u8), select + 1, idx);
             }
         }
         base
@@ -776,12 +833,15 @@ mod test_static_construction {
             (&[1, 2, 3][..], "123"),
         ];
         Trie::sort_dict(&mut dict);
-        assert_eq!(dict, vec![
-            (&[1, 2, 3][..], "123"),
-            (&[1, 2, 3][..], "123"),
-            (&[1, 2, 3, 4][..], "1234"),
-            (&[1, 2, 3, 5][..], "1235"),
-        ]);
+        assert_eq!(
+            dict,
+            vec![
+                (&[1, 2, 3][..], "123"),
+                (&[1, 2, 3][..], "123"),
+                (&[1, 2, 3, 4][..], "1234"),
+                (&[1, 2, 3, 5][..], "1235"),
+            ]
+        );
     }
 
     #[test]
@@ -804,7 +864,8 @@ mod test_static_construction {
                 (&[0, 1, 3][..], "013"),
                 (&[0, 1, 3][..], "013"),
                 (&[0, 1, 3, 4][..], "0134"),
-            ][..]);
+            ][..]
+        );
         assert_eq!(
             Trie::get_domain(Trie::get_domain(&src[..], 0, 0), 1, 1),
             &[
@@ -812,18 +873,16 @@ mod test_static_construction {
                 (&[0, 1, 3][..], "013"),
                 (&[0, 1, 3][..], "013"),
                 (&[0, 1, 3, 4][..], "0134"),
-            ][..]);
+            ][..]
+        );
         assert_eq!(
             Trie::get_domain(&src[..], 0, 1),
-            &[
-                (&[1, 0][..], "10"),
-                (&[1, 1][..], "11"),
-            ][..]);
+            &[(&[1, 0][..], "10"), (&[1, 1][..], "11"),][..]
+        );
         assert_eq!(
             Trie::get_domain(&src[..], 0, 2),
-            &[
-                (&[2, 1, 2][..], "212"),
-            ][..]);
+            &[(&[2, 1, 2][..], "212"),][..]
+        );
     }
 
     #[test]
@@ -838,7 +897,10 @@ mod test_static_construction {
             ("扁かろ".as_bytes(), String::from("扁かろ")),
             ("証城寺".as_bytes(), String::from("証城寺")),
             ("たい".as_bytes(), String::from("たい")),
-            ("ニッカーボッカー".as_bytes(), String::from("ニッカーボッカー")),
+            (
+                "ニッカーボッカー".as_bytes(),
+                String::from("ニッカーボッカー"),
+            ),
             ("抜け出せれ".as_bytes(), String::from("抜け出せれ")),
             ("長府浜浦".as_bytes(), String::from("長府浜浦")),
             ("中佃".as_bytes(), String::from("中佃")),
@@ -847,21 +909,63 @@ mod test_static_construction {
             ("浅黒かれ".as_bytes(), String::from("浅黒かれ")),
         ]);
 
-        assert_eq!(trie.find("張り込め".as_bytes()), Ok(&[String::from("張り込め")][..]));
+        assert_eq!(
+            trie.find("張り込め".as_bytes()),
+            Ok(&[String::from("張り込め")][..])
+        );
         assert_eq!(trie.find("1".as_bytes()), Ok(&[String::from("1")][..]));
         assert_eq!(trie.find("1月".as_bytes()), Ok(&[String::from("1月")][..]));
-        assert_eq!(trie.find("ニッカーボッカー".as_bytes()), Ok(&[String::from("ニッカーボッカー")][..]));
-        assert_eq!(trie.find("証城寺".as_bytes()), Ok(&[String::from("証城寺")][..]));
-        assert_eq!(trie.find("差し昇っ".as_bytes()), Ok(&[String::from("差し登っ")][..]));
-        assert_eq!(trie.find("抜け出せれ".as_bytes()), Ok(&[String::from("抜け出せれ")][..]));
-        assert_eq!(trie.find("たい".as_bytes()), Ok(&[String::from("たい")][..]));
-        assert_eq!(trie.find("アオガエル".as_bytes()), Ok(&[String::from("アオガエル")][..]));
-        assert_eq!(trie.find("長府浜浦".as_bytes()), Ok(&[String::from("長府浜浦")][..]));
-        assert_eq!(trie.find("中佃".as_bytes()), Ok(&[String::from("中佃")][..]));
-        assert_eq!(trie.find("幻視".as_bytes()), Ok(&[String::from("幻視")][..]));
-        assert_eq!(trie.find("小船木".as_bytes()), Ok(&[String::from("小船木")][..]));
-        assert_eq!(trie.find("浅黒かれ".as_bytes()), Ok(&[String::from("浅黒かれ")][..]));
-        assert_eq!(trie.find("扁かろ".as_bytes()), Ok(&[String::from("扁かろ")][..]));
-        assert_eq!(trie.find("咲き乱れ".as_bytes()), Ok(&[String::from("咲き乱れ")][..]));
+        assert_eq!(
+            trie.find("ニッカーボッカー".as_bytes()),
+            Ok(&[String::from("ニッカーボッカー")][..])
+        );
+        assert_eq!(
+            trie.find("証城寺".as_bytes()),
+            Ok(&[String::from("証城寺")][..])
+        );
+        assert_eq!(
+            trie.find("差し昇っ".as_bytes()),
+            Ok(&[String::from("差し登っ")][..])
+        );
+        assert_eq!(
+            trie.find("抜け出せれ".as_bytes()),
+            Ok(&[String::from("抜け出せれ")][..])
+        );
+        assert_eq!(
+            trie.find("たい".as_bytes()),
+            Ok(&[String::from("たい")][..])
+        );
+        assert_eq!(
+            trie.find("アオガエル".as_bytes()),
+            Ok(&[String::from("アオガエル")][..])
+        );
+        assert_eq!(
+            trie.find("長府浜浦".as_bytes()),
+            Ok(&[String::from("長府浜浦")][..])
+        );
+        assert_eq!(
+            trie.find("中佃".as_bytes()),
+            Ok(&[String::from("中佃")][..])
+        );
+        assert_eq!(
+            trie.find("幻視".as_bytes()),
+            Ok(&[String::from("幻視")][..])
+        );
+        assert_eq!(
+            trie.find("小船木".as_bytes()),
+            Ok(&[String::from("小船木")][..])
+        );
+        assert_eq!(
+            trie.find("浅黒かれ".as_bytes()),
+            Ok(&[String::from("浅黒かれ")][..])
+        );
+        assert_eq!(
+            trie.find("扁かろ".as_bytes()),
+            Ok(&[String::from("扁かろ")][..])
+        );
+        assert_eq!(
+            trie.find("咲き乱れ".as_bytes()),
+            Ok(&[String::from("咲き乱れ")][..])
+        );
     }
 }

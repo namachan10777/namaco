@@ -1,17 +1,17 @@
-mod trie;
 mod matrix;
 pub mod parser;
-use std::io::{Read, Write};
-use std::io;
-use std::i64;
-use std::usize;
-use serde::{Serialize};
+mod trie;
 use serde::de::DeserializeOwned;
-use serde_derive::{Serialize, Deserialize};
+use serde::Serialize;
+use serde_derive::{Deserialize, Serialize};
+use std::i64;
+use std::io;
+use std::io::{Read, Write};
+use std::usize;
 #[macro_use]
 extern crate failure;
 
-pub use self::parser::Word as Word;
+pub use self::parser::Word;
 
 #[derive(Serialize, Deserialize)]
 pub struct Morph<T: Serialize> {
@@ -22,8 +22,14 @@ pub struct Morph<T: Serialize> {
 use core::fmt::Debug;
 impl<T: Serialize + DeserializeOwned + Clone + Debug> Morph<T> {
     #[allow(dead_code)]
-    pub fn from_text<R: Read, F>(matrix_src: &mut R, dict_src: &mut R, classifier: F) -> Result<Self, io::Error> 
-        where F: Fn(&[&str]) -> (Vec<u8>, Word<T>) {
+    pub fn from_text<R: Read, F>(
+        matrix_src: &mut R,
+        dict_src: &mut R,
+        classifier: F,
+    ) -> Result<Self, io::Error>
+    where
+        F: Fn(&[&str]) -> (Vec<u8>, Word<T>),
+    {
         let trie = parser::build_trie(dict_src, classifier)?;
         let matrix = matrix::Matrix::new(matrix_src).unwrap();
         Ok(Morph { trie, matrix })
@@ -47,7 +53,7 @@ impl<T: Serialize + DeserializeOwned + Clone + Debug> Morph<T> {
 
     pub fn parse(&self, input: &[u8]) -> Option<Vec<T>> {
         if input.len() == 0 {
-            return None
+            return None;
         }
         // dp[p] = (cost, lid, word)
         // p    : position of end of word
@@ -56,20 +62,20 @@ impl<T: Serialize + DeserializeOwned + Clone + Debug> Morph<T> {
         let mut dp: Vec<Vec<(i64, Vec<&Word<T>>)>> = Vec::new();
         dp.resize_with(input.len(), || Vec::new());
         // initialize dp
-        for end in 1..input.len()+1 {
+        for end in 1..input.len() + 1 {
             if let Ok(words) = self.trie.find(&input[..end]) {
                 for word in words {
-                    dp[end-1].push((self.matrix.at(0, word.rid) as i64 + word.cost, vec![word]));
+                    dp[end - 1].push((self.matrix.at(0, word.rid) as i64 + word.cost, vec![word]));
                 }
             }
         }
         // fill dp
-        for end in 2..input.len()+1 {
+        for end in 2..input.len() + 1 {
             for begin in 1..end {
                 if let Ok(words) = self.trie.find(&input[begin..end]) {
                     for word in words {
                         let mut best: Option<(i64, Vec<&Word<T>>)> = None;
-                        for prev in &dp[begin-1] {
+                        for prev in &dp[begin - 1] {
                             let join_cost = self.matrix.at(prev.1.last().unwrap().lid, word.rid);
                             let total_cost = prev.0 + word.cost + join_cost as i64;
                             best = match best {
@@ -78,11 +84,10 @@ impl<T: Serialize + DeserializeOwned + Clone + Debug> Morph<T> {
                                         let mut path = prev.1.clone();
                                         path.push(word);
                                         Some((total_cost, path))
-                                    }
-                                    else {
+                                    } else {
                                         Some(inner)
                                     }
-                                },
+                                }
                                 None => {
                                     let mut path = prev.1.clone();
                                     path.push(word);
@@ -91,7 +96,7 @@ impl<T: Serialize + DeserializeOwned + Clone + Debug> Morph<T> {
                             }
                         }
                         if let Some(inner) = best {
-                            dp[end-1].push(inner);
+                            dp[end - 1].push(inner);
                         }
                     }
                 }
@@ -100,18 +105,17 @@ impl<T: Serialize + DeserializeOwned + Clone + Debug> Morph<T> {
 
         // select best path
         let mut best: Option<(i64, &Vec<&Word<T>>)> = None;
-        for (cost, path) in &dp[input.len()-1] {
-            let cost  = *cost + self.matrix.at(path.last().unwrap().lid, 0) as i64;
+        for (cost, path) in &dp[input.len() - 1] {
+            let cost = *cost + self.matrix.at(path.last().unwrap().lid, 0) as i64;
             best = match best {
-                Some((best_cost, best_path)) =>
+                Some((best_cost, best_path)) => {
                     if cost < best_cost {
                         Some((cost, path))
-                    }
-                    else {
+                    } else {
                         Some((best_cost, best_path))
-                    },
-                None =>
-                    Some((cost, path))
+                    }
+                }
+                None => Some((cost, path)),
             }
         }
 
@@ -139,20 +143,22 @@ mod test_morph {
                           2 0 21
                           2 1 -54
                           2 2 512";
-        let morph =
-            Morph::from_text(
-                &mut Cursor::new(matrix_src.as_bytes()),
-                &mut Cursor::new(dict_src.as_bytes()),
-                |arr| (
+        let morph = Morph::from_text(
+            &mut Cursor::new(matrix_src.as_bytes()),
+            &mut Cursor::new(dict_src.as_bytes()),
+            |arr| {
+                (
                     arr[0].as_bytes().to_vec(),
                     Word {
                         info: String::from(arr[4].trim()),
                         lid: arr[1].parse().unwrap(),
                         rid: arr[2].parse().unwrap(),
                         cost: arr[3].parse().unwrap(),
-                    }
+                    },
                 )
-            ).unwrap();
+            },
+        )
+        .unwrap();
         let mut bytes = Vec::new();
         morph.export(&mut bytes).unwrap();
         let restored = Morph::import(&mut Cursor::new(bytes)).unwrap();
@@ -163,7 +169,8 @@ mod test_morph {
                 rid: 10,
                 cost: 100,
                 info: String::from("カニ"),
-            }][..]));
+            }][..])
+        );
         assert_eq!(
             restored.trie.find("土".as_bytes()),
             Ok(&[Word {
@@ -171,7 +178,8 @@ mod test_morph {
                 rid: 20,
                 cost: 200,
                 info: String::from("ツチ"),
-            }][..]));
+            }][..])
+        );
         assert_eq!(
             restored.trie.find("味".as_bytes()),
             Ok(&[Word {
@@ -179,7 +187,8 @@ mod test_morph {
                 rid: 30,
                 cost: 300,
                 info: String::from("アジ"),
-            }][..]));
+            }][..])
+        );
         assert_eq!(restored.matrix.at(0, 1), 121);
         assert_eq!(restored.matrix.at(2, 1), -54);
     }
@@ -212,23 +221,30 @@ mod test_morph {
             5 6 -12165
             6 6 -3547
             7 0 -409";
-        let morph =
-            Morph::from_text(&mut Cursor::new(matrix_src.as_bytes()), &mut Cursor::new(dict_src.as_bytes()),
-                |arr| (
+        let morph = Morph::from_text(
+            &mut Cursor::new(matrix_src.as_bytes()),
+            &mut Cursor::new(dict_src.as_bytes()),
+            |arr| {
+                (
                     arr[0].as_bytes().to_vec(),
                     Word {
                         info: String::from(arr[4].trim()),
                         lid: arr[1].parse().unwrap(),
                         rid: arr[2].parse().unwrap(),
                         cost: arr[3].parse().unwrap(),
-                    }
+                    },
                 )
-            ).unwrap();
-        assert_eq!(morph.parse("東京都に住む".as_bytes()), Some(vec![
-            String::from("東京・名詞・トウキョウ"),
-            String::from("都・接尾辞・ト"),
-            String::from("に・助詞・ニ"),
-            String::from("住む・動詞・スム"),
-        ]));
+            },
+        )
+        .unwrap();
+        assert_eq!(
+            morph.parse("東京都に住む".as_bytes()),
+            Some(vec![
+                String::from("東京・名詞・トウキョウ"),
+                String::from("都・接尾辞・ト"),
+                String::from("に・助詞・ニ"),
+                String::from("住む・動詞・スム"),
+            ])
+        );
     }
 }
