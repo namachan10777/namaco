@@ -19,6 +19,8 @@ pub struct Morph<T: Serialize> {
     matrix: matrix::Matrix,
 }
 
+type DPTable<'a, T> = Vec<Vec<(i64, Vec<&'a Word<T>>)>>;
+
 use core::fmt::Debug;
 impl<T: Serialize + DeserializeOwned + Clone + Debug> Morph<T> {
     #[allow(dead_code)]
@@ -38,7 +40,7 @@ impl<T: Serialize + DeserializeOwned + Clone + Debug> Morph<T> {
     #[allow(dead_code)]
     pub fn export<W: Write>(&self, target: &mut W) -> Result<(), io::Error> {
         let mut stream = io::BufWriter::new(target);
-        stream.write(&bincode::serialize(&self).unwrap())?;
+        stream.write_all(&bincode::serialize(&self).unwrap())?;
         Ok(())
     }
 
@@ -52,15 +54,15 @@ impl<T: Serialize + DeserializeOwned + Clone + Debug> Morph<T> {
     }
 
     pub fn parse(&self, input: &[u8]) -> Option<Vec<T>> {
-        if input.len() == 0 {
+        if input.is_empty() {
             return None;
         }
         // dp[p] = (cost, lid, word)
         // p    : position of end of word
         // cost : total cost
         // word : None or Word<T>
-        let mut dp: Vec<Vec<(i64, Vec<&Word<T>>)>> = Vec::new();
-        dp.resize_with(input.len(), || Vec::new());
+        let mut dp: DPTable<T> = Vec::new();
+        dp.resize_with(input.len(), Vec::new);
         // initialize dp
         for end in 1..input.len() + 1 {
             if let Ok(words) = self.trie.find(&input[..end]) {

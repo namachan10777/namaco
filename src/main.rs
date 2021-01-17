@@ -1,6 +1,5 @@
 // copyright (c) 2019 Nakano Masaki <namachan10777@gmail.com>
 
-use clap;
 use std::fs;
 
 fn main() {

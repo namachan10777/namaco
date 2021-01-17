@@ -16,7 +16,7 @@ pub struct Word<T> {
     pub rid: usize,
 }
 
-fn split_by_comma<'a>(line: &'a str) -> Vec<&'a str> {
+fn split_by_comma(line: &str) -> Vec<&str> {
     let mut buf = Vec::new();
     const COMMA: u8 = 0x2c;
     const DQUOTE: u8 = 0x22;

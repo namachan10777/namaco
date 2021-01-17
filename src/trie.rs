@@ -69,12 +69,10 @@ impl Into<DecodedNode> for Node {
             }
         } else if self.base == NO_CHILD {
             DecodedNode::Term(self.check, self.id)
+        } else if self.id == NO_ITEM {
+            DecodedNode::Sec(self.check, self.base, None)
         } else {
-            if self.id == NO_ITEM {
-                DecodedNode::Sec(self.check, self.base, None)
-            } else {
-                DecodedNode::Sec(self.check, self.base, Some(self.id))
-            }
+            DecodedNode::Sec(self.check, self.base, Some(self.id))
         }
     }
 }
@@ -97,11 +95,7 @@ impl From<DecodedNode> for Node {
                 check,
                 id: NO_ITEM,
             },
-            DecodedNode::Sec(check, base, Some(id)) => Node {
-                base,
-                check,
-                id: id,
-            },
+            DecodedNode::Sec(check, base, Some(id)) => Node { base, check, id },
             DecodedNode::Blank => Node {
                 base: NO_CHILD,
                 check: NO_PARENT,
@@ -180,8 +174,8 @@ pub struct Trie<T: Serialize> {
 const ROW_LEN: usize = 256;
 type Row = [Node; ROW_LEN];
 
-impl<T: Serialize> Trie<T> {
-    pub fn new() -> Trie<T> {
+impl<T: Serialize> Default for Trie<T> {
+    fn default() -> Trie<T> {
         let mut tree = vec![Node::blank(); 256];
         tree[0] = Node::root(0);
         Trie {
@@ -198,8 +192,7 @@ impl<T: Serialize> Trie<T> {
     // Err((passed times, last idx))
     fn explore(&self, way: &[u8]) -> Result<usize, (usize, usize)> {
         let mut here = 0usize;
-        let mut octet_count = 0usize;
-        for octet in way {
+        for (octet_count, octet) in way.iter().enumerate() {
             let check = here;
             if self.tree[here].base == NO_CHILD {
                 return Err((octet_count, check));
@@ -208,7 +201,6 @@ impl<T: Serialize> Trie<T> {
             if self.tree[here].check != check {
                 return Err((octet_count, check));
             }
-            octet_count += 1;
         }
         Ok(here)
     }
@@ -258,10 +250,10 @@ impl<T: Serialize> Trie<T> {
                 for innser_offset in 0..256 {
                     let mut safe = true;
                     let offset = (block_idx << 8) | innser_offset;
-                    for target_idx in 0..256 {
-                        if target[target_idx]
+                    for (target_idx, target) in target.iter().enumerate() {
+                        if *target
                             && DecodedNode::Blank
-                                != Into::<DecodedNode>::into(self.tree[offset ^ target_idx].clone())
+                                != Into::<DecodedNode>::into(self.tree[offset ^ target_idx])
                         {
                             safe = false;
                             break;
@@ -334,9 +326,9 @@ impl<T: Serialize> Trie<T> {
     fn read_row(&self, parent_idx: usize) -> Row {
         let mut buf: Row = [Node::blank(); 256];
         let base = self.tree[parent_idx].base;
-        for i in 0..256 {
+        for (i, buf_i) in buf.iter_mut().enumerate() {
             if self.tree[base ^ i].check == parent_idx {
-                buf[i] = self.tree[base ^ i];
+                *buf_i = self.tree[base ^ i];
             }
         }
         buf
@@ -434,22 +426,22 @@ impl<T: Serialize> Trie<T> {
         let to = self.reallocate_base(&mask, cnt);
         self.capacities[to >> 8] -= cnt;
         // place
-        for i in 0..256 {
-            if row[i].check != NO_PARENT {
+        for (i, row) in row.iter().enumerate() {
+            if row.check != NO_PARENT {
                 // place bro
-                self.tree[to ^ i] = row[i];
+                self.tree[to ^ i] = *row;
                 // update children's check
                 for j in 0..256 {
-                    if row[i].base != NO_CHILD && self.tree[row[i].base ^ j].check == from ^ i {
-                        self.tree[row[i].base ^ j].check = to ^ i;
+                    if row.base != NO_CHILD && self.tree[row.base ^ j].check == from ^ i {
+                        self.tree[row.base ^ j].check = to ^ i;
                     }
                 }
             }
         }
         // additional placement without updation of children's check
-        for i in 0..256 {
-            if addition[i].check != NO_PARENT || addition[i].base != NO_CHILD {
-                self.tree[to ^ i] = addition[i];
+        for (i, addition) in addition.iter().enumerate() {
+            if addition.check != NO_PARENT || addition.base != NO_CHILD {
+                self.tree[to ^ i] = *addition;
             }
         }
         to
@@ -574,20 +566,18 @@ impl<T: Serialize> Trie<T> {
                 else {
                     parent_idx = self.insert_by_slide_brothers(child_idx, parent_idx);
                 }
-            } else {
-                if child.check == parent_idx {
-                    parent_idx = child_idx;
-                }
-                // conflict case
-                else {
-                    let brother_num = self.count_children(parent_idx);
-                    let stranger_num = self.count_children(child.check);
-                    parent_idx = if brother_num > stranger_num {
-                        self.insert_by_push_out(child_idx, parent_idx)
-                    } else {
-                        self.insert_by_slide_brothers(child_idx, parent_idx)
-                    };
-                }
+            } else if child.check == parent_idx {
+                parent_idx = child_idx;
+            }
+            // conflict case
+            else {
+                let brother_num = self.count_children(parent_idx);
+                let stranger_num = self.count_children(child.check);
+                parent_idx = if brother_num > stranger_num {
+                    self.insert_by_push_out(child_idx, parent_idx)
+                } else {
+                    self.insert_by_slide_brothers(child_idx, parent_idx)
+                };
             }
         }
         self.tree[parent_idx].id = if self.tree[parent_idx].id == NO_ITEM {
@@ -621,7 +611,7 @@ mod test_add_find {
     use super::*;
     #[test]
     fn test_add_find() {
-        let mut trie: Trie<String> = Trie::new();
+        let mut trie: Trie<String> = Trie::default();
         trie.add(&[2, 1], String::from("21")).unwrap();
         trie.add(&[1, 1], String::from("11")).unwrap();
         trie.add(&[1, 2, 3], String::from("123")).unwrap();
@@ -651,7 +641,7 @@ mod test_add_find {
 
     #[test]
     fn test_add() {
-        let mut trie: Trie<String> = Trie::new();
+        let mut trie: Trie<String> = Trie::default();
         trie.add("張り込め".as_bytes(), String::from("張り込め"))
             .unwrap();
         trie.add(
@@ -754,13 +744,11 @@ impl<T: Serialize + Clone> Trie<T> {
         let mut begin = None;
         let mut end = None;
 
-        for i in 0..src.len() {
-            if src[i].0[select] == target && src[i].0.len() > select + 1 {
-                if begin == None {
-                    begin = Some(i);
-                }
+        for (i, src) in src.iter().enumerate() {
+            if src.0[select] == target && src.0.len() > select + 1 && begin == None {
+                begin = Some(i);
             }
-            if begin != None && end == None && src[i].0[select] != target {
+            if begin != None && end == None && src.0[select] != target {
                 end = Some(i);
             }
         }
@@ -803,8 +791,8 @@ impl<T: Serialize + Clone> Trie<T> {
                 self.tree[i ^ base] = row[i];
             }
         }
-        for i in 0..256 {
-            if update[i] {
+        for (i, update) in update.iter().enumerate() {
+            if *update {
                 let idx = i ^ base;
                 self.tree[idx].base =
                     self.add_static(Self::get_domain(src, select, i as u8), select + 1, idx);
@@ -815,7 +803,7 @@ impl<T: Serialize + Clone> Trie<T> {
 
     pub fn static_construction(src: &mut Vec<(&[u8], T)>) -> Trie<T> {
         Trie::sort_dict(src);
-        let mut trie = Trie::new();
+        let mut trie = Trie::default();
         trie.tree[0] = Node::root(0);
         trie.tree[0].base = trie.add_static(src, 0, 0);
         trie
